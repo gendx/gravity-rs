@@ -1,0 +1,8 @@
+[package]
+name = "gravity"
+version = "0.1.0"
+authors = ["G. Endignoux <ggendx@gmail.com>"]
+
+[dependencies]
+arrayref = "0.3.4"
+byteorder = "1.1.0"
