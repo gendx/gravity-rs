@@ -88,8 +88,8 @@ impl Signature {
     {
         let mut sign: Signature = Default::default();
         sign.wots_sign = wots::Signature::deserialize(it)?;
-        for i in 0..MERKLE_H {
-            sign.auth[i] = Hash::deserialize(it)?;
+        for x in sign.auth.iter_mut() {
+            *x = Hash::deserialize(it)?;
         }
         Some(sign)
     }

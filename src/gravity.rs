@@ -30,17 +30,14 @@ impl SecKey {
             cache: merkle::MerkleTree::new(GRAVITY_C),
         };
 
-        {
-            let leaves = sk.cache.leaves();
-            let layer = 0u32;
+        let layer = 0u32;
+        let prng = prng::Prng::new(&sk.seed);
+        let subtree_sk = subtree::SecKey::new(&prng);
 
-            let prng = prng::Prng::new(&sk.seed);
-            let subtree_sk = subtree::SecKey::new(&prng);
-            for i in 0..GRAVITY_CCC {
-                let address = address::Address::new(layer, (MERKLE_HHH * i) as u64);
-                let pk = subtree_sk.genpk(&address);
-                leaves[i] = pk.h;
-            }
+        for (i, leaf) in sk.cache.leaves().iter_mut().enumerate() {
+            let address = address::Address::new(layer, (i << MERKLE_H) as u64);
+            let pk = subtree_sk.genpk(&address);
+            *leaf = pk.h;
         }
 
         sk.cache.generate();
@@ -127,11 +124,11 @@ impl Signature {
     {
         let mut sign: Signature = Default::default();
         sign.pors_sign = pors::Signature::deserialize(it)?;
-        for i in 0..GRAVITY_D {
-            sign.subtrees[i] = subtree::Signature::deserialize(it)?;
+        for t in sign.subtrees.iter_mut() {
+            *t = subtree::Signature::deserialize(it)?;
         }
-        for i in 0..GRAVITY_C {
-            sign.auth_c[i] = Hash::deserialize(it)?;
+        for x in sign.auth_c.iter_mut() {
+            *x = Hash::deserialize(it)?;
         }
         Some(sign)
     }
@@ -227,5 +224,126 @@ mod tests {
         assert_eq!(sign_bytes, expect);
     }
 
-    // TODO: KATs
+    #[test]
+    fn test_genkey_kat() {
+        let (random, pkh) = match get_config_type() {
+            ConfigType::S => {
+                let random: [u8; 64] = *b"\x5E\x97\x5E\x8F\xAC\x3E\x0E\x56\
+                                          \x7B\x4E\xD0\x23\x86\xFB\x6A\x58\
+                                          \xBE\x85\xE6\x30\x37\x3F\x1C\x7D\
+                                          \x35\xF2\xBD\x8F\x3D\x4E\xBB\x3E\
+                                          \x4A\xA5\x08\x42\x0C\xAF\xED\xC8\
+                                          \x02\x46\x87\x0B\x96\xF8\xDB\xFE\
+                                          \xB4\x18\x0B\xD1\x55\xCE\xFD\x08\
+                                          \x2E\x13\xAC\xE4\x7F\x39\xB0\x0E";
+                let pkh: [u8; 32] = *b"\xF3\x6C\xD0\xE8\x4D\x6B\xE4\x13\
+                                       \x30\x65\x00\x88\xA6\x48\x0B\x38\
+                                       \x91\x68\x9C\x18\xB0\x20\xE2\xD3\
+                                       \x21\xF9\xD0\xB4\x69\x98\x3D\xC7";
+                (random, pkh)
+            }
+            ConfigType::M => {
+                let random: [u8; 64] = *b"\x82\xD0\x0C\x6C\x85\x57\x72\xBF\
+                                          \x95\x0F\x54\x07\x1D\xF6\xCE\x12\
+                                          \x2E\xE3\xFE\xCE\x15\x7F\xFA\xA0\
+                                          \x55\xA1\x17\x09\x6F\xC1\xC5\xA0\
+                                          \x47\x5D\xA7\xEB\x7C\xE1\xF0\xDC\
+                                          \xBA\x49\xE8\xC9\xB4\x6F\x78\x6C\
+                                          \xC4\xD6\x9A\x3E\xCD\x96\x78\xFB\
+                                          \xB9\x58\x85\x66\x49\xE2\x24\x6C";
+                let pkh: [u8; 32] = *b"\x15\x88\xAB\x53\x4D\xF9\xD4\xE1\
+                                       \x17\x0F\x8A\x7F\xB4\x38\x55\x5B\
+                                       \x3E\x02\xEB\x5F\x1D\x00\xC3\x4F\
+                                       \x2B\x86\x6D\x5D\x25\x64\x55\xC8";
+                (random, pkh)
+            }
+            ConfigType::L => {
+                let random: [u8; 64] = *b"\x8C\x6A\xEC\xA7\x87\xF8\x42\xC3\
+                                          \x7A\x0F\xA7\xBB\x59\x7B\xBF\xB2\
+                                          \x5B\xF1\x53\xD8\x0C\x30\xE5\x62\
+                                          \xFF\x99\xC9\x61\xC5\x63\x50\x63\
+                                          \xEF\x90\x3D\x2E\x3F\xDE\xA3\x97\
+                                          \xE1\x9A\xF8\xC8\xF2\x7E\x81\x25\
+                                          \xC1\xC1\x64\x79\x82\xFD\x98\x68\
+                                          \x61\x89\x4E\xD9\x29\xE5\x5E\x41";
+                let pkh: [u8; 32] = *b"\xBD\x6F\x26\xD0\x87\xFE\xA3\x4F\
+                                       \x75\xEA\x24\x71\x9C\x0D\xA2\x80\
+                                       \x67\x71\xEE\x84\x8B\x8D\x9D\xEE\
+                                       \xD8\xA4\x47\x4D\xDB\x85\xA2\x9B";
+                (random, pkh)
+            }
+            ConfigType::Unknown => unimplemented!(),
+        };
+
+        let sk = SecKey::new(&random);
+        let pk = sk.genpk();
+        assert_eq!(pk.h.h, pkh);
+    }
+
+    #[test]
+    fn test_sign_kat() {
+        use hex;
+
+        let (random, msg, hex_file) = match get_config_type() {
+            ConfigType::S => {
+                let random: [u8; 64] = *b"\x5E\x97\x5E\x8F\xAC\x3E\x0E\x56\
+                                          \x7B\x4E\xD0\x23\x86\xFB\x6A\x58\
+                                          \xBE\x85\xE6\x30\x37\x3F\x1C\x7D\
+                                          \x35\xF2\xBD\x8F\x3D\x4E\xBB\x3E\
+                                          \x4A\xA5\x08\x42\x0C\xAF\xED\xC8\
+                                          \x02\x46\x87\x0B\x96\xF8\xDB\xFE\
+                                          \xB4\x18\x0B\xD1\x55\xCE\xFD\x08\
+                                          \x2E\x13\xAC\xE4\x7F\x39\xB0\x0E";
+                let msg = hex::decode(
+                    "D81C4D8D734FCBFBEADE3D3F8A039FAA2A2C9957E835AD55B22E75BF57BB556AC8",
+                ).unwrap();
+                let hex_file = include_str!("../test_files/test_sign_kat_S.hex");
+                (random, msg, hex_file)
+            }
+            ConfigType::M => {
+                let random: [u8; 64] = *b"\x82\xD0\x0C\x6C\x85\x57\x72\xBF\
+                                          \x95\x0F\x54\x07\x1D\xF6\xCE\x12\
+                                          \x2E\xE3\xFE\xCE\x15\x7F\xFA\xA0\
+                                          \x55\xA1\x17\x09\x6F\xC1\xC5\xA0\
+                                          \x47\x5D\xA7\xEB\x7C\xE1\xF0\xDC\
+                                          \xBA\x49\xE8\xC9\xB4\x6F\x78\x6C\
+                                          \xC4\xD6\x9A\x3E\xCD\x96\x78\xFB\
+                                          \xB9\x58\x85\x66\x49\xE2\x24\x6C";
+                let msg = hex::decode(
+                    "D81C4D8D734FCBFBEADE3D3F8A039FAA2A2C9957E835AD55B22E75BF57BB556AC8",
+                ).unwrap();
+                let hex_file = include_str!("../test_files/test_sign_kat_M.hex");
+                (random, msg, hex_file)
+            }
+            ConfigType::L => {
+                let random: [u8; 64] = *b"\x8C\x6A\xEC\xA7\x87\xF8\x42\xC3\
+                                          \x7A\x0F\xA7\xBB\x59\x7B\xBF\xB2\
+                                          \x5B\xF1\x53\xD8\x0C\x30\xE5\x62\
+                                          \xFF\x99\xC9\x61\xC5\x63\x50\x63\
+                                          \xEF\x90\x3D\x2E\x3F\xDE\xA3\x97\
+                                          \xE1\x9A\xF8\xC8\xF2\x7E\x81\x25\
+                                          \xC1\xC1\x64\x79\x82\xFD\x98\x68\
+                                          \x61\x89\x4E\xD9\x29\xE5\x5E\x41";
+                let msg = hex::decode(
+                    "D81C4D8D734FCBFBEADE3D3F8A039FAA2A2C9957E835AD55B22E75BF57BB556AC8",
+                ).unwrap();
+                let hex_file = include_str!("../test_files/test_sign_kat_L.hex");
+                (random, msg, hex_file)
+            }
+            ConfigType::Unknown => unimplemented!(),
+        };
+
+        let mut hex: Vec<u8> = vec![];
+        for x in hex_file.split_whitespace() {
+            hex.extend(x.bytes())
+        }
+        let expect: Vec<u8> = hex::decode(hex).unwrap();
+
+        let sk = SecKey::new(&random);
+        let sign = sk.sign_bytes(&msg);
+        let mut sign_bytes = Vec::<u8>::new();
+        sign.serialize(&mut sign_bytes);
+
+        assert_eq!(sign_bytes, expect);
+    }
 }

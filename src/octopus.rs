@@ -37,8 +37,8 @@ impl Octopus {
         }
 
         let mut block = [0u8; 4];
-        for i in 0..4 {
-            block[i] = *it.next()?;
+        for x in block.iter_mut() {
+            *x = *it.next()?;
         }
         let count = LittleEndian::read_u32(&block) as usize;
 

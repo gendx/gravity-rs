@@ -28,8 +28,8 @@ impl Hash {
         I: Iterator<Item = &'a u8>,
     {
         let mut hash: Hash = Default::default();
-        for i in 0..config::HASH_SIZE {
-            hash.h[i] = *it.next()?
+        for x in hash.h.iter_mut() {
+            *x = *it.next()?;
         }
         Some(hash)
     }

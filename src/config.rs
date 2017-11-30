@@ -21,11 +21,9 @@ pub const PORS_K: usize = K;
 
 // Implicit constraint: GRAVITY_C + MERKLE_H * GRAVITY_D <= 64
 pub const MERKLE_H: usize = H;
-pub const MERKLE_HHH: usize = 1 << MERKLE_H;
-pub const MERKLE_H_MASK: usize = MERKLE_HHH - 1;
+pub const MERKLE_H_MASK: usize = (1 << MERKLE_H) - 1;
 
 pub const GRAVITY_C: usize = C;
-pub const GRAVITY_CCC: usize = 1 << GRAVITY_C;
 pub const GRAVITY_D: usize = D;
 const GRAVITY_HD: usize = MERKLE_H * GRAVITY_D;
 // Note: dirty hack to avoid shift overflow when GRAVITY_H = 64

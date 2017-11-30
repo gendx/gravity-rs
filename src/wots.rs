@@ -104,8 +104,8 @@ impl Signature {
         I: Iterator<Item = &'a u8>,
     {
         let mut sign: Signature = Default::default();
-        for i in 0..WOTS_ELL {
-            sign.0[i] = Hash::deserialize(it)?;
+        for x in sign.0.iter_mut() {
+            *x = Hash::deserialize(it)?;
         }
         Some(sign)
     }

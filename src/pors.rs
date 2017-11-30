@@ -91,8 +91,8 @@ impl Signature {
     {
         let mut sign: Signature = Default::default();
         sign.pepper = Hash::deserialize(it)?;
-        for i in 0..PORS_K {
-            sign.values[i] = Hash::deserialize(it)?;
+        for x in sign.values.iter_mut() {
+            *x = Hash::deserialize(it)?;
         }
         sign.octopus = octopus::Octopus::deserialize(it)?;
         Some(sign)
