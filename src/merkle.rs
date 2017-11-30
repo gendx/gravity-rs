@@ -15,6 +15,7 @@ impl MerkleBuf {
         self.buf.as_mut_slice().split_at_mut(n)
     }
 
+    #[cfg(test)]
     pub fn fill_leaves(&mut self, leaves: &[Hash]) {
         for i in 0..leaves.len() {
             self.buf[i] = leaves[i];
@@ -79,6 +80,7 @@ pub fn merkle_compress_all(root: &mut Hash, buf: &mut MerkleBuf, height: usize) 
     *root = dst[0]
 }
 
+#[cfg(test)]
 pub fn merkle_compress_all_leaves(leaves: &[Hash], height: usize) -> Hash {
     let count = leaves.len();
     assert_eq!(count, 1 << height);
@@ -113,21 +115,6 @@ pub fn merkle_gen_auth(
     }
 
     dst[0]
-}
-
-pub fn merkle_gen_auth_leaves(
-    auth: &mut [Hash],
-    leaves: &[Hash],
-    height: usize,
-    index: usize,
-) -> Hash {
-    let count = leaves.len();
-    assert_eq!(count, 1 << height);
-
-    let mut buf = MerkleBuf::new(height);
-    buf.fill_leaves(leaves);
-
-    merkle_gen_auth(auth, &mut buf, height, index)
 }
 
 pub fn merkle_compress_auth(
@@ -331,7 +318,6 @@ mod tests {
 
         let h1 = hash::hash_2n_to_n_ret(&a1, &h0);
         let h2 = hash::hash_2n_to_n_ret(&a2, &h1);
-        let h3 = hash::hash_2n_to_n_ret(&a3, &h2);
 
         let mut node = h0;
         let index = merkle_compress_auth(&mut node, &auth, 2, 7);

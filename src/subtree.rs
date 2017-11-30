@@ -66,6 +66,7 @@ impl<'a> SecKey<'a> {
 }
 
 impl PubKey {
+    #[cfg(test)]
     pub fn verify(&self, address: &address::Address, sign: &Signature, msg: &Hash) -> bool {
         let h = sign.extract(&address, msg);
         self.h == h
@@ -78,6 +79,25 @@ impl Signature {
         let mut h = self.wots_sign.extract(msg);
         merkle::merkle_compress_auth(&mut h, &self.auth, MERKLE_H, index);
         h
+    }
+
+    pub fn serialize(&self, output: &mut Vec<u8>) {
+        self.wots_sign.serialize(output);
+        for x in self.auth.iter() {
+            x.serialize(output);
+        }
+    }
+
+    pub fn deserialize<'a, I>(it: &mut I) -> Option<Self>
+    where
+        I: Iterator<Item = &'a u8>,
+    {
+        let mut sign: Signature = Default::default();
+        sign.wots_sign = wots::Signature::deserialize(it)?;
+        for i in 0..MERKLE_H {
+            sign.auth[i] = Hash::deserialize(it)?;
+        }
+        Some(sign)
     }
 }
 

@@ -1,3 +1,4 @@
+use byteorder::{ByteOrder, BigEndian};
 use hash;
 use hash::Hash;
 use merkle;
@@ -9,6 +10,7 @@ use config::*;
 pub struct SecKey {
     values: Vec<Hash>,
 }
+#[cfg(test)]
 pub struct PubKey(Hash);
 #[derive(Default)]
 pub struct Signature {
@@ -24,6 +26,7 @@ impl SecKey {
         sk
     }
 
+    #[cfg(test)]
     pub fn genpk(&self) -> PubKey {
         let mut buf = vec![Default::default(); PORS_T];
         hash::hash_parallel_all(buf.as_mut_slice(), self.values.as_slice());
@@ -52,6 +55,7 @@ impl SecKey {
     }
 }
 
+#[cfg(test)]
 impl PubKey {
     pub fn verify(&self, sign: &Signature, msg: &Hash) -> bool {
         if let Some((_, h)) = sign.extract(msg) {
@@ -75,6 +79,27 @@ impl Signature {
             None
         }
     }
+
+    pub fn serialize(&self, output: &mut Vec<u8>) {
+        self.pepper.serialize(output);
+        for x in self.values.iter() {
+            x.serialize(output);
+        }
+        self.octopus.serialize(output);
+    }
+
+    pub fn deserialize<'a, I>(it: &mut I) -> Option<Self>
+    where
+        I: Iterator<Item = &'a u8>,
+    {
+        let mut sign: Signature = Default::default();
+        sign.pepper = Hash::deserialize(it)?;
+        for i in 0..PORS_K {
+            sign.values[i] = Hash::deserialize(it)?;
+        }
+        sign.octopus = octopus::Octopus::deserialize(it)?;
+        Some(sign)
+    }
 }
 
 
@@ -97,12 +122,9 @@ fn obtain_address_subset(pepper: &Hash, msg: &Hash) -> (address::Address, [usize
     let prng = prng::Prng::new(&seed);
     let address = address::Address::new(0, 0);
 
-    let mut block = [0u8; 16];
+    let mut block = Default::default();
     prng.genblock(&mut block, &address, 0);
-    let instance: u64 = (block[15] as u64) | ((block[14] as u64) << 8) |
-        ((block[13] as u64) << 16) | ((block[12] as u64) << 24) |
-        ((block[11] as u64) << 32) | ((block[10] as u64) << 40) |
-        ((block[9] as u64) << 48) | ((block[8] as u64) << 56);
+    let instance: u64 = BigEndian::read_u64(array_ref![block.h, 24, 8]);
     let instance = instance & GRAVITY_MASK;
 
     let mut subset: [usize; PORS_K] = [0; PORS_K];
@@ -112,7 +134,9 @@ fn obtain_address_subset(pepper: &Hash, msg: &Hash) -> (address::Address, [usize
     'outer: while count < PORS_K {
         prng.genblock(&mut block, &address, counter);
         'inner: for i in 0..8 {
-            let x = ((block[2 * i] as usize) << 8) | (block[2 * i + 1] as usize);
+            let x = BigEndian::read_u32(array_ref![block.h, 4 * i, 4]) as usize;
+            let x = x % PORS_T;
+            println!("pors x = {}", x);
 
             for i in 0..count {
                 if subset[i] == x {

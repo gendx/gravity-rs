@@ -77,6 +77,7 @@ fn expand256(key: &[u8; 32], rkeys: &mut [u64x2; 15]) {
     rkeys[14] = key0_xmm;
 }
 
+#[cfg(test)]
 fn expand256_slice(key: &[u8; 32], rkeys: &mut [[u8; 16]; 15]) {
     let mut rkeys_xmm = [u64x2(0, 0); 15];
     expand256(key, &mut rkeys_xmm);
@@ -98,6 +99,13 @@ pub fn aes256(dst: &mut [u8; 16], src: &[u8; 16], key: &[u8; 32]) {
     intrinsics::aesenclast(&mut state_xmm, &rkeys[14]);
 
     state_xmm.write(dst);
+}
+
+#[cfg(test)]
+pub fn aes256_ret(src: &[u8; 16], key: &[u8; 32]) -> [u8; 16] {
+    let mut dst = [0u8; 16];
+    aes256(&mut dst, src, key);
+    dst
 }
 
 
@@ -247,7 +255,7 @@ mod tests {
         let mut state = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         let mut state_bis = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         mixcolumns(&mut state);
-        mixcolumns(&mut state_bis);
+        mixcolumns_bis(&mut state_bis);
         assert_eq!(state, state_bis);
     }
 

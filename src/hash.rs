@@ -2,6 +2,7 @@ use config;
 use primitives::haraka256;
 use primitives::haraka512;
 use std::fmt;
+use sha2::{Sha256, Digest};
 
 #[derive(Clone, Copy, Default, PartialEq)]
 pub struct Hash {
@@ -15,6 +16,28 @@ impl fmt::Debug for Hash {
         }
         Ok(())
     }
+}
+
+impl Hash {
+    pub fn serialize(&self, output: &mut Vec<u8>) {
+        output.extend(self.h.iter());
+    }
+
+    pub fn deserialize<'a, I>(it: &mut I) -> Option<Self>
+    where
+        I: Iterator<Item = &'a u8>,
+    {
+        let mut hash: Hash = Default::default();
+        for i in 0..config::HASH_SIZE {
+            hash.h[i] = *it.next()?
+        }
+        Some(hash)
+    }
+}
+
+pub fn long_hash(src: &[u8]) -> Hash {
+    let digest = Sha256::digest(src);
+    Hash { h: *array_ref![digest, 0, config::HASH_SIZE] }
 }
 
 #[inline(always)]

@@ -74,6 +74,7 @@ impl SecKey {
 }
 
 impl PubKey {
+    #[cfg(test)]
     pub fn verify(&self, sign: &Signature, msg: &Hash) -> bool {
         let h = sign.extract(msg);
         self.h == h
@@ -90,6 +91,23 @@ impl Signature {
         }
 
         ltree_leaves_ret(&buf)
+    }
+
+    pub fn serialize(&self, output: &mut Vec<u8>) {
+        for x in self.0.iter() {
+            x.serialize(output);
+        }
+    }
+
+    pub fn deserialize<'a, I>(it: &mut I) -> Option<Self>
+    where
+        I: Iterator<Item = &'a u8>,
+    {
+        let mut sign: Signature = Default::default();
+        for i in 0..WOTS_ELL {
+            sign.0[i] = Hash::deserialize(it)?;
+        }
+        Some(sign)
     }
 }
 

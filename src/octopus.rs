@@ -1,11 +1,66 @@
+use byteorder::{ByteOrder, LittleEndian};
+use std::mem;
 use hash;
 use hash::Hash;
 use merkle;
-use std::mem;
+use config::*;
 
 #[derive(Default, Debug, PartialEq)]
 pub struct Octopus {
     pub oct: Vec<Hash>,
+}
+
+impl Octopus {
+    pub fn serialize(&self, output: &mut Vec<u8>) {
+        for x in self.oct.iter() {
+            x.serialize(output);
+        }
+        // TODO: improve this!
+        let empty = Hash { h: [0; HASH_SIZE] };
+        let count = self.oct.len();
+        for _ in count..(PORS_K * PORS_TAU) {
+            empty.serialize(output);
+        }
+
+        let mut block = [0u8; 16];
+        LittleEndian::write_u32(array_mut_ref![&mut block, 0, 4], count as u32);
+        output.extend(block.iter());
+    }
+
+    pub fn deserialize<'a, I>(it: &mut I) -> Option<Self>
+    where
+        I: Iterator<Item = &'a u8>,
+    {
+        let mut octopus: Octopus = Default::default();
+        for _ in 0..(PORS_K * PORS_TAU) {
+            octopus.oct.push(Hash::deserialize(it)?);
+        }
+
+        let mut block = [0u8; 4];
+        for i in 0..4 {
+            block[i] = *it.next()?;
+        }
+        let count = LittleEndian::read_u32(&block) as usize;
+
+        for _ in 0..12 {
+            if *it.next()? != 0 {
+                return None;
+            }
+        }
+
+        if count > PORS_K * PORS_TAU {
+            return None;
+        }
+        let empty = Hash { h: [0; HASH_SIZE] };
+        for i in count..(PORS_K * PORS_TAU) {
+            if octopus.oct[i] != empty {
+                return None;
+            }
+        }
+        octopus.oct.resize(count, empty);
+
+        Some(octopus)
+    }
 }
 
 pub fn merkle_gen_octopus(
