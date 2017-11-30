@@ -156,14 +156,33 @@ mod tests {
         assert!(pk.verify_hash(&sign, &msg));
     }
 
-    // TODO: check config parameters in these tests.
     #[test]
     fn test_genkey_zeros() {
         let random: [u8; 64] = [0u8; 64];
-        let pkh: [u8; 32] = *b"\x57\x03\x58\x87\x1a\x7a\x2c\xfe\
-                               \x1e\xab\xf1\x3b\x4c\x11\x3a\x81\
-                               \xce\x08\x9a\x2c\x02\x04\xa3\xbb\
-                               \xc4\x4d\xd7\xb6\x94\x07\x94\x2a";
+        let pkh = match get_config_type() {
+            ConfigType::S => {
+                let pkh: [u8; 32] = *b"\x57\x03\x58\x87\x1a\x7a\x2c\xfe\
+                                       \x1e\xab\xf1\x3b\x4c\x11\x3a\x81\
+                                       \xce\x08\x9a\x2c\x02\x04\xa3\xbb\
+                                       \xc4\x4d\xd7\xb6\x94\x07\x94\x2a";
+                pkh
+            }
+            ConfigType::M => {
+                let pkh: [u8; 32] = *b"\x33\xbd\x9a\x33\x3d\x5f\x88\xc6\
+                                       \x0a\xca\x08\x42\x3e\xe3\xbc\xcf\
+                                       \x02\xe1\xc7\xd2\x74\xa8\xec\xf4\
+                                       \xd7\x4e\xfe\x34\x05\xb9\x24\x04";
+                pkh
+            }
+            ConfigType::L => {
+                let pkh: [u8; 32] = *b"\xcb\xf7\x04\xd6\xe0\xf5\x2e\xb7\
+                                       \xaa\xad\xee\xd8\xf9\xad\x8c\xde\
+                                       \x84\x68\x1c\xa8\x03\x75\x4c\xc2\
+                                       \x1f\x50\x69\x68\x41\xc1\xb3\x03";
+                pkh
+            }
+            ConfigType::Unknown => unimplemented!(),
+        };
 
         let sk = SecKey::new(&random);
         let pk = sk.genpk();
@@ -179,9 +198,24 @@ mod tests {
                                \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\
                                \x10\x11\x12\x13\x14\x15\x16\x17\
                                \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
+        let hex_file = match get_config_type() {
+            ConfigType::S => {
+                let hex_file = include_str!("../test_files/test_sign_zero_S.hex");
+                hex_file
+            }
+            ConfigType::M => {
+                let hex_file = include_str!("../test_files/test_sign_zero_M.hex");
+                hex_file
+            }
+            ConfigType::L => {
+                let hex_file = include_str!("../test_files/test_sign_zero_L.hex");
+                hex_file
+            }
+            ConfigType::Unknown => unimplemented!(),
+        };
 
         let mut hex: Vec<u8> = vec![];
-        for x in include_str!("../test_files/test_sign_zero.hex").split_whitespace() {
+        for x in hex_file.split_whitespace() {
             hex.extend(x.bytes())
         }
         let expect: Vec<u8> = hex::decode(hex).unwrap();

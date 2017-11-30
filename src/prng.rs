@@ -49,7 +49,10 @@ mod tests {
 
         assert_eq!(
             *array_ref![dst.h, 0, 16],
-            aes256::aes256_ret(&[0; 16], &hash::tests::HASH_ELEMENT.h)
+            aes256::aes256_ret(
+                &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                &hash::tests::HASH_ELEMENT.h,
+            )
         );
         assert_eq!(
             *array_ref![dst.h, 16, 16],
@@ -60,5 +63,54 @@ mod tests {
         );
     }
 
-    // TODO: test vectors
+    #[test]
+    fn test_genblocks() {
+        use hash;
+
+        let prng = Prng::new(&hash::tests::HASH_ELEMENT);
+        let mut dst = [Default::default(); 3];
+        prng.genblocks(&mut dst, &address::Address::new(0, 0));
+
+        for i in 0..3 {
+            let j = 2 * i as u8;
+            assert_eq!(
+                *array_ref![dst[i].h, 0, 16],
+                aes256::aes256_ret(
+                    &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, j],
+                    &hash::tests::HASH_ELEMENT.h,
+                )
+            );
+            let j = (2 * i + 1) as u8;
+            assert_eq!(
+                *array_ref![dst[i].h, 16, 16],
+                aes256::aes256_ret(
+                    &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, j],
+                    &hash::tests::HASH_ELEMENT.h,
+                )
+            );
+        }
+    }
+
+    #[test]
+    fn test_kat() {
+        use hash;
+        use hex;
+
+        let prng = Prng::new(&hash::tests::HASH_ELEMENT);
+        let mut dst = [Default::default(); 3];
+        prng.genblocks(
+            &mut dst,
+            &address::Address::new(0x01020304, 0x05060708090a0b0c),
+        );
+
+        let expect = hex::decode(
+            "b53cb99417a048bb15cfd6736804f6af990ff34be63fc19cb626381935d550ca\
+             983118485ada760182fb24cc2899158bb44ca576ec99a8a9775897a34d62cc4c\
+             bd4071f05445d2eb4922114e2f847347a63ea10249474f55f9d6ca81cf66a3ca",
+        ).unwrap();
+
+        assert_eq!(dst[0].h, *array_ref![expect, 0, 32]);
+        assert_eq!(dst[1].h, *array_ref![expect, 32, 32]);
+        assert_eq!(dst[2].h, *array_ref![expect, 64, 32]);
+    }
 }

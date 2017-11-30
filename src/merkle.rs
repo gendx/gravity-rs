@@ -3,16 +3,28 @@ use hash::Hash;
 use std::mem;
 
 pub struct MerkleBuf {
+    height: usize,
     buf: Vec<Hash>,
 }
 
 impl MerkleBuf {
     pub fn new(height: usize) -> Self {
-        Self { buf: vec![Default::default(); 1 << (height + 1)] }
+        Self {
+            height,
+            buf: vec![Default::default(); 1 << (height + 1)],
+        }
     }
 
-    pub fn split_at_mut(&mut self, n: usize) -> (&mut [Hash], &mut [Hash]) {
-        self.buf.as_mut_slice().split_at_mut(n)
+    pub fn height(&self) -> usize {
+        self.height
+    }
+
+    pub fn split_half_mut(&mut self) -> (&mut [Hash], &mut [Hash]) {
+        self.buf.as_mut_slice().split_at_mut(1 << self.height)
+    }
+
+    pub fn slice_leaves_mut(&mut self) -> &mut [Hash] {
+        &mut self.buf[..(1 << self.height)]
     }
 
     #[cfg(test)]
@@ -67,9 +79,10 @@ impl MerkleTree {
     }
 }
 
-pub fn merkle_compress_all(root: &mut Hash, buf: &mut MerkleBuf, height: usize) {
+pub fn merkle_compress_all(root: &mut Hash, buf: &mut MerkleBuf) {
+    let height = buf.height();
     let mut n = 1 << height;
-    let (mut dst, mut src) = buf.split_at_mut(n);
+    let (mut dst, mut src) = buf.split_half_mut();
 
     for _ in 0..height {
         mem::swap(&mut dst, &mut src);
@@ -89,18 +102,14 @@ pub fn merkle_compress_all_leaves(leaves: &[Hash], height: usize) -> Hash {
     buf.fill_leaves(leaves);
 
     let mut root = Default::default();
-    merkle_compress_all(&mut root, &mut buf, height);
+    merkle_compress_all(&mut root, &mut buf);
     root
 }
 
-pub fn merkle_gen_auth(
-    auth: &mut [Hash],
-    buf: &mut MerkleBuf,
-    height: usize,
-    mut index: usize,
-) -> Hash {
+pub fn merkle_gen_auth(auth: &mut [Hash], buf: &mut MerkleBuf, mut index: usize) -> Hash {
+    let height = buf.height();
     let mut n = 1 << height;
-    let (mut dst, mut src) = buf.split_at_mut(n);
+    let (mut dst, mut src) = buf.split_half_mut();
 
     for l in 0..height {
         // Copy auth path
@@ -152,7 +161,7 @@ mod tests {
         let mut buf = MerkleBuf::new(height);
         buf.fill_leaves(leaves);
 
-        merkle_gen_auth(auth, &mut buf, height, index)
+        merkle_gen_auth(auth, &mut buf, index)
     }
 
     // Notation for these tests: H(h_i, h_i) = h_{i+1}

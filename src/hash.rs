@@ -40,7 +40,6 @@ pub fn long_hash(src: &[u8]) -> Hash {
     Hash { h: *array_ref![digest, 0, config::HASH_SIZE] }
 }
 
-#[inline(always)]
 pub fn hash_n_to_n(dst: &mut Hash, src: &Hash) {
     haraka256::haraka256_6round(&mut dst.h, &src.h)
 }
@@ -52,7 +51,6 @@ pub fn hash_n_to_n_ret(src: &Hash) -> Hash {
     dst
 }
 
-#[inline(always)]
 pub fn hash_2n_to_n(dst: &mut Hash, src0: &Hash, src1: &Hash) {
     haraka512::haraka512_6round(&mut dst.h, &src0.h, &src1.h)
 }

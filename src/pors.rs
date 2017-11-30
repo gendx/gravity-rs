@@ -45,11 +45,8 @@ impl SecKey {
         }
 
         let mut buf = merkle::MerkleBuf::new(PORS_TAU);
-        {
-            let (tmp, _) = buf.split_at_mut(PORS_T);
-            hash::hash_parallel(tmp, self.values.as_slice(), PORS_T);
-        }
-        let root = octopus::merkle_gen_octopus(&mut sign.octopus, &mut buf, PORS_TAU, &mut subset);
+        hash::hash_parallel(buf.slice_leaves_mut(), self.values.as_slice(), PORS_T);
+        let root = octopus::merkle_gen_octopus(&mut sign.octopus, &mut buf, &mut subset);
 
         (root, sign)
     }
@@ -115,8 +112,11 @@ pub fn sign(prng: &prng::Prng, salt: &Hash, msg: &Hash) -> (address::Address, Ha
 
 fn obtain_address_subset(pepper: &Hash, msg: &Hash) -> (address::Address, [usize; PORS_K]) {
     // TODO: use some kind of static_assert instead
-    assert_eq!(PORS_TAU, 16, "PORS is only implemented for PORS_TAU = 16");
     assert!(PORS_K > 0, "PORS is only implemented for PORS_K > 0");
+    assert!(
+        PORS_K <= PORS_T,
+        "PORS is only implemented for PORS_K <= PORS_T"
+    );
 
     let seed = hash::hash_2n_to_n_ret(pepper, msg);
     let prng = prng::Prng::new(&seed);
@@ -136,7 +136,6 @@ fn obtain_address_subset(pepper: &Hash, msg: &Hash) -> (address::Address, [usize
         'inner: for i in 0..8 {
             let x = BigEndian::read_u32(array_ref![block.h, 4 * i, 4]) as usize;
             let x = x % PORS_T;
-            println!("pors x = {}", x);
 
             for i in 0..count {
                 if subset[i] == x {
@@ -176,7 +175,6 @@ mod tests {
         let pk = sk.genpk();
         let (_, sign) = sk.sign_subset(pepper, subset);
 
-        //let h1 = hash::hash_n_to_n_ret(&msg);
         assert!(pk.verify(&sign, &msg));
     }
 

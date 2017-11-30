@@ -131,5 +131,110 @@ mod tests {
         assert!(pk.verify(&sign, &msg));
     }
 
+    #[test]
+    fn test_split_msg_0() {
+        let msg = Hash { h: [0; HASH_SIZE] };
+        let lengths = split_msg(&msg);
+        let mut expect: [usize; WOTS_ELL] = [0; WOTS_ELL];
+        expect[64] = 0x0;
+        expect[65] = 0xC;
+        expect[66] = 0x3;
+        assert_eq!(
+            0x0 + 0xC * WOTS_W + 0x3 * WOTS_W * WOTS_W,
+            WOTS_ELL1 * (WOTS_W - 1)
+        );
+        // TODO: cannot use assert_eq for [usize; 67]
+        assert_eq!(&lengths as &[usize], &expect as &[usize]);
+    }
+
+    #[test]
+    fn test_split_msg_1() {
+        let msg = Hash {
+            h: *b"\x00\x01\x02\x03\x04\x05\x06\x07\
+                  \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\
+                  \x10\x11\x12\x13\x14\x15\x16\x17\
+                  \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f",
+        };
+        let lengths = split_msg(&msg);
+        let expect: [usize; WOTS_ELL] = [
+            0,
+            0,
+            0,
+            1,
+            0,
+            2,
+            0,
+            3,
+            0,
+            4,
+            0,
+            5,
+            0,
+            6,
+            0,
+            7,
+            0,
+            8,
+            0,
+            9,
+            0,
+            10,
+            0,
+            11,
+            0,
+            12,
+            0,
+            13,
+            0,
+            14,
+            0,
+            15,
+            1,
+            0,
+            1,
+            1,
+            1,
+            2,
+            1,
+            3,
+            1,
+            4,
+            1,
+            5,
+            1,
+            6,
+            1,
+            7,
+            1,
+            8,
+            1,
+            9,
+            1,
+            10,
+            1,
+            11,
+            1,
+            12,
+            1,
+            13,
+            1,
+            14,
+            1,
+            15,
+            0,
+            12,
+            2,
+        ];
+        let checksum = 16 * 15 // zeros
+            + 16 * 14 // ones
+            + 15 * 16; // sequence
+        assert_eq!(
+            expect[64] + expect[65] * WOTS_W + expect[66] * WOTS_W * WOTS_W,
+            checksum
+        );
+        // TODO: cannot use assert_eq for [usize; 67]
+        assert_eq!(&lengths as &[usize], &expect as &[usize]);
+    }
+
     // TODO: test vectors
 }

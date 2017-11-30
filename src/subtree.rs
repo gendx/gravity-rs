@@ -24,20 +24,17 @@ impl<'a> SecKey<'a> {
 
     pub fn genpk(&self, address: &address::Address) -> PubKey {
         let mut buf = merkle::MerkleBuf::new(MERKLE_H);
-        let (mut address, _) = address.normalize_index((MERKLE_HHH - 1) as u64);
+        let (mut address, _) = address.normalize_index(MERKLE_H_MASK as u64);
 
-        {
-            let (tmp, _) = buf.split_at_mut(MERKLE_HHH);
-            for i in 0..MERKLE_HHH {
-                let sk = wots::SecKey::new(self.prng, &address);
-                let pk = sk.genpk();
-                tmp[i] = pk.h;
-                address.incr_instance();
-            }
+        for leaf in buf.slice_leaves_mut() {
+            let sk = wots::SecKey::new(self.prng, &address);
+            let pk = sk.genpk();
+            *leaf = pk.h;
+            address.incr_instance();
         }
 
         let mut dst = Default::default();
-        merkle::merkle_compress_all(&mut dst, &mut buf, MERKLE_H);
+        merkle::merkle_compress_all(&mut dst, &mut buf);
         PubKey { h: dst }
     }
 
@@ -45,22 +42,19 @@ impl<'a> SecKey<'a> {
         let mut sign: Signature = Default::default();
 
         let mut buf = merkle::MerkleBuf::new(MERKLE_H);
-        let (mut address, index) = address.normalize_index((MERKLE_HHH - 1) as u64);
+        let (mut address, index) = address.normalize_index(MERKLE_H_MASK as u64);
 
-        {
-            let (tmp, _) = buf.split_at_mut(MERKLE_HHH);
-            for i in 0..MERKLE_HHH {
-                let sk = wots::SecKey::new(self.prng, &address);
-                let pk = sk.genpk();
-                tmp[i] = pk.h;
-                if i == index {
-                    sign.wots_sign = sk.sign(msg);
-                }
-                address.incr_instance();
+        for (i, leaf) in buf.slice_leaves_mut().iter_mut().enumerate() {
+            let sk = wots::SecKey::new(self.prng, &address);
+            let pk = sk.genpk();
+            *leaf = pk.h;
+            if i == index {
+                sign.wots_sign = sk.sign(msg);
             }
+            address.incr_instance();
         }
 
-        let root = merkle::merkle_gen_auth(&mut sign.auth, &mut buf, MERKLE_H, index);
+        let root = merkle::merkle_gen_auth(&mut sign.auth, &mut buf, index);
         (root, sign)
     }
 }
@@ -75,7 +69,7 @@ impl PubKey {
 
 impl Signature {
     pub fn extract(&self, address: &address::Address, msg: &Hash) -> Hash {
-        let (_, index) = address.normalize_index((MERKLE_HHH - 1) as u64);
+        let (_, index) = address.normalize_index(MERKLE_H_MASK as u64);
         let mut h = self.wots_sign.extract(msg);
         merkle::merkle_compress_auth(&mut h, &self.auth, MERKLE_H, index);
         h

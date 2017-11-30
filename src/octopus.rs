@@ -66,11 +66,11 @@ impl Octopus {
 pub fn merkle_gen_octopus(
     octopus: &mut Octopus,
     buf: &mut merkle::MerkleBuf,
-    height: usize,
     indices: &mut [usize],
 ) -> Hash {
+    let height = buf.height();
     let mut n = 1 << height;
-    let (mut dst, mut src) = buf.split_at_mut(n);
+    let (mut dst, mut src) = buf.split_half_mut();
     let mut count = indices.len();
 
     for _ in 0..height {
@@ -168,7 +168,7 @@ mod tests {
         let mut buf = merkle::MerkleBuf::new(height);
         buf.fill_leaves(leaves);
 
-        merkle_gen_octopus(octopus, &mut buf, height, indices)
+        merkle_gen_octopus(octopus, &mut buf, indices)
     }
 
     #[test]
