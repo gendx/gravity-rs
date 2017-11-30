@@ -14,6 +14,11 @@ High-level test vectors generated with the reference C implementation check the 
 
 You may want to use `cargo test --release`, because the implementation is quite slow in non-release mode.
 
+## Disclaimer
+
+The Gravity-SPHINCS signature scheme is still young and has not yet been independently audited, nor has this code.
+For now, this is simply a proposal so don't use it in production!
+
 ## License
 
 MIT
