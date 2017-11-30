@@ -1,9 +1,9 @@
 /* Can modify */
-const TAU: usize = 16;
+const TAU: usize = 16; // 16 is often good
 const K: usize = 24;
-const C: usize = 10;
-const D: usize = 1;
 const H: usize = 5; // 5 is often good
+const D: usize = 1;
+const C: usize = 10;
 
 
 /* Don't modify */

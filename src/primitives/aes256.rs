@@ -77,8 +77,7 @@ fn expand256(key: &[u8; 32], rkeys: &mut [u64x2; 15]) {
     rkeys[14] = key0_xmm;
 }
 
-#[cfg(test)]
-fn expand256_slice(key: &[u8; 32], rkeys: &mut [[u8; 16]; 15]) {
+pub fn expand256_slice(key: &[u8; 32], rkeys: &mut [[u8; 16]; 15]) {
     let mut rkeys_xmm = [u64x2(0, 0); 15];
     expand256(key, &mut rkeys_xmm);
     for i in 0..15 {
@@ -86,10 +85,7 @@ fn expand256_slice(key: &[u8; 32], rkeys: &mut [[u8; 16]; 15]) {
     }
 }
 
-pub fn aes256(dst: &mut [u8; 16], src: &[u8; 16], key: &[u8; 32]) {
-    let mut rkeys = [u64x2(0, 0); 15];
-    expand256(key, &mut rkeys);
-
+fn aes256_rkeys_xmm(dst: &mut [u8; 16], src: &[u8; 16], rkeys: &[u64x2; 15]) {
     let mut state_xmm = u64x2::read(src);
 
     intrinsics::pxor(&mut state_xmm, &rkeys[0]);
@@ -101,10 +97,22 @@ pub fn aes256(dst: &mut [u8; 16], src: &[u8; 16], key: &[u8; 32]) {
     state_xmm.write(dst);
 }
 
+pub fn aes256_rkeys_slice(dst: &mut [u8; 16], src: &[u8; 16], rkeys: &[[u8; 16]; 15]) {
+    let mut rkeys_xmm = [u64x2(0, 0); 15];
+    for i in 0..15 {
+        rkeys_xmm[i] = u64x2::read(&rkeys[i]);
+    }
+
+    aes256_rkeys_xmm(dst, src, &rkeys_xmm);
+}
+
 #[cfg(test)]
 pub fn aes256_ret(src: &[u8; 16], key: &[u8; 32]) -> [u8; 16] {
+    let mut rkeys = [u64x2(0, 0); 15];
+    expand256(key, &mut rkeys);
+
     let mut dst = [0u8; 16];
-    aes256(&mut dst, src, key);
+    aes256_rkeys_xmm(&mut dst, src, &rkeys);
     dst
 }
 
@@ -115,7 +123,6 @@ mod tests {
 
     #[test]
     fn test_aes256() {
-        let mut dst = [0; 16];
         let src = b"\x00\x01\x02\x03\x04\x05\x06\x07\
                     \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f";
         let key = b"\x00\x01\x02\x03\x04\x05\x06\x07\
@@ -124,13 +131,12 @@ mod tests {
                     \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
         let expect = b"\x5a\x6e\x04\x57\x08\xfb\x71\x96\
                        \xf0\x2e\x55\x3d\x02\xc3\xa6\x92";
-        aes256(&mut dst, src, key);
+        let dst = aes256_ret(src, key);
         assert_eq!(&dst, expect);
     }
 
     #[test]
     fn test_aes256_nist() {
-        let mut dst = [0; 16];
         let src = b"\x6b\xc1\xbe\xe2\x2e\x40\x9f\x96\
                     \xe9\x3d\x7e\x11\x73\x93\x17\x2a";
         let key = b"\x60\x3d\xeb\x10\x15\xca\x71\xbe\
@@ -139,7 +145,7 @@ mod tests {
                     \x2d\x98\x10\xa3\x09\x14\xdf\xf4";
         let expect = b"\xf3\xee\xd1\xbd\xb5\xd2\xa0\x3c\
                        \x06\x4b\x5a\x7e\x3d\xb1\x81\xf8";
-        aes256(&mut dst, src, key);
+        let dst = aes256_ret(src, key);
         assert_eq!(&dst, expect);
     }
 

@@ -2,27 +2,29 @@ use hash::Hash;
 use primitives::aes256;
 use address;
 
+#[derive(Default)]
 pub struct Prng {
-    seed: Hash,
-    // TODO: precompute AES round keys
+    rkeys: [[u8; 16]; 15],
 }
 
 impl Prng {
     pub fn new(seed: &Hash) -> Self {
-        Self { seed: *seed }
+        let mut prng: Prng = Default::default();
+        aes256::expand256_slice(&seed.h, &mut prng.rkeys);
+        prng
     }
 
     pub fn genblock(&self, dst: &mut Hash, address: &address::Address, counter: u32) {
         let h = &mut dst.h;
-        aes256::aes256(
+        aes256::aes256_rkeys_slice(
             array_mut_ref![h, 0, 16],
             &address.to_block(2 * counter),
-            &self.seed.h,
+            &self.rkeys,
         );
-        aes256::aes256(
+        aes256::aes256_rkeys_slice(
             array_mut_ref![h, 16, 16],
             &address.to_block(2 * counter + 1),
-            &self.seed.h,
+            &self.rkeys,
         );
     }
 
