@@ -48,6 +48,7 @@ fn truncstore(dst: &mut [u8; 32], s0: &u64x2, s1: &u64x2, s2: &u64x2, s3: &u64x2
 }
 
 // TODO: parametrize by number of rounds when supported by Rust
+#[cfg(test)]
 pub fn haraka512_5round(dst: &mut [u8; 32], src0: &[u8; 32], src1: &[u8; 32]) {
     let mut s0 = u64x2::read(array_ref![src0, 0, 16]);
     let mut s1 = u64x2::read(array_ref![src0, 16, 16]);
@@ -90,14 +91,6 @@ pub fn haraka512_6round(dst: &mut [u8; 32], src0: &[u8; 32], src1: &[u8; 32]) {
     intrinsics::pxor(&mut s3, &t3);
 
     truncstore(dst, &s0, &s1, &s2, &s3);
-}
-
-pub fn haraka512_5round_bis(dst: &mut [u8; 32], src: &[u8; 64]) {
-    haraka512_5round(dst, array_ref![src, 0, 32], array_ref![src, 32, 32])
-}
-
-pub fn haraka512_6round_bis(dst: &mut [u8; 32], src: &[u8; 64]) {
-    haraka512_6round(dst, array_ref![src, 0, 32], array_ref![src, 32, 32])
 }
 
 
@@ -622,6 +615,10 @@ mod tests {
         assert_eq!(dst, expect);
     }
 
+    pub fn haraka512_5round_bis(dst: &mut [u8; 32], src: &[u8; 64]) {
+        haraka512_5round(dst, array_ref![src, 0, 32], array_ref![src, 32, 32])
+    }
+
     #[test]
     fn test_haraka512_5round() {
         // Test vector computed with https://github.com/kste/haraka/blob/master/code/python/ref.py
@@ -640,6 +637,10 @@ mod tests {
                        \xdd\x92\x77\xb0\x94\x5b\xe2\xaa";
         haraka512_5round_bis(&mut dst, &src);
         assert_eq!(&dst, expect);
+    }
+
+    pub fn haraka512_6round_bis(dst: &mut [u8; 32], src: &[u8; 64]) {
+        haraka512_6round(dst, array_ref![src, 0, 32], array_ref![src, 32, 32])
     }
 
     #[test]

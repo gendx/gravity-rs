@@ -20,30 +20,6 @@ mod pors;
 mod subtree;
 mod gravity;
 
-use primitives::haraka256;
-use primitives::haraka512;
-use primitives::aes256;
-
-pub fn haraka256_5round(dst: &mut [u8; 32], src: &[u8; 32]) {
-    haraka256::haraka256_5round(dst, src)
-}
-
-pub fn haraka512_5round(dst: &mut [u8; 32], src: &[u8; 64]) {
-    haraka512::haraka512_5round_bis(dst, src)
-}
-
-pub fn haraka256_6round(dst: &mut [u8; 32], src: &[u8; 32]) {
-    haraka256::haraka256_6round(dst, src)
-}
-
-pub fn haraka512_6round(dst: &mut [u8; 32], src: &[u8; 64]) {
-    haraka512::haraka512_6round_bis(dst, src)
-}
-
-pub fn aes256(dst: &mut [u8; 16], src: &[u8; 16], key: &[u8; 32]) {
-    aes256::aes256(dst, src, key)
-}
-
 pub fn gravity_genpk(public: &mut [u8; 32], secret: &[u8; 64]) {
     let sk = gravity::SecKey::new(&secret);
     let pk = sk.genpk();

@@ -25,6 +25,7 @@ fn aes_mix2(s0: &mut u64x2, s1: &mut u64x2, rci: usize) {
 }
 
 // TODO: parametrize by number of rounds when supported by Rust
+#[cfg(test)]
 pub fn haraka256_5round(dst: &mut [u8; 32], src: &[u8; 32]) {
     let mut s0 = u64x2::read(array_ref![src, 0, 16]);
     let mut s1 = u64x2::read(array_ref![src, 16, 16]);
