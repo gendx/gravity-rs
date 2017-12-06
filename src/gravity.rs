@@ -156,27 +156,24 @@ mod tests {
     #[test]
     fn test_genkey_zeros() {
         let random: [u8; 64] = [0u8; 64];
-        let pkh = match get_config_type() {
+        let pkh: [u8; 32] = match get_config_type() {
             ConfigType::S => {
-                let pkh: [u8; 32] = *b"\x57\x03\x58\x87\x1a\x7a\x2c\xfe\
-                                       \x1e\xab\xf1\x3b\x4c\x11\x3a\x81\
-                                       \xce\x08\x9a\x2c\x02\x04\xa3\xbb\
-                                       \xc4\x4d\xd7\xb6\x94\x07\x94\x2a";
-                pkh
+                *b"\x57\x03\x58\x87\x1a\x7a\x2c\xfe\
+                   \x1e\xab\xf1\x3b\x4c\x11\x3a\x81\
+                   \xce\x08\x9a\x2c\x02\x04\xa3\xbb\
+                   \xc4\x4d\xd7\xb6\x94\x07\x94\x2a"
             }
             ConfigType::M => {
-                let pkh: [u8; 32] = *b"\x33\xbd\x9a\x33\x3d\x5f\x88\xc6\
-                                       \x0a\xca\x08\x42\x3e\xe3\xbc\xcf\
-                                       \x02\xe1\xc7\xd2\x74\xa8\xec\xf4\
-                                       \xd7\x4e\xfe\x34\x05\xb9\x24\x04";
-                pkh
+                *b"\x33\xbd\x9a\x33\x3d\x5f\x88\xc6\
+                   \x0a\xca\x08\x42\x3e\xe3\xbc\xcf\
+                   \x02\xe1\xc7\xd2\x74\xa8\xec\xf4\
+                   \xd7\x4e\xfe\x34\x05\xb9\x24\x04"
             }
             ConfigType::L => {
-                let pkh: [u8; 32] = *b"\xcb\xf7\x04\xd6\xe0\xf5\x2e\xb7\
-                                       \xaa\xad\xee\xd8\xf9\xad\x8c\xde\
-                                       \x84\x68\x1c\xa8\x03\x75\x4c\xc2\
-                                       \x1f\x50\x69\x68\x41\xc1\xb3\x03";
-                pkh
+                *b"\xcb\xf7\x04\xd6\xe0\xf5\x2e\xb7\
+                   \xaa\xad\xee\xd8\xf9\xad\x8c\xde\
+                   \x84\x68\x1c\xa8\x03\x75\x4c\xc2\
+                   \x1f\x50\x69\x68\x41\xc1\xb3\x03"
             }
             ConfigType::Unknown => unimplemented!(),
         };
