@@ -226,51 +226,32 @@ mod tests {
 
     #[test]
     fn test_genkey_kat() {
-        let (random, pkh) = match get_config_type() {
+        let random: [u8; 64] = *b"\x7C\x99\x35\xA0\xB0\x76\x94\xAA\
+                                  \x0C\x6D\x10\xE4\xDB\x6B\x1A\xDD\
+                                  \x2F\xD8\x1A\x25\xCC\xB1\x48\x03\
+                                  \x2D\xCD\x73\x99\x36\x73\x7F\x2D\
+                                  \x86\x26\xED\x79\xD4\x51\x14\x08\
+                                  \x00\xE0\x3B\x59\xB9\x56\xF8\x21\
+                                  \x0E\x55\x60\x67\x40\x7D\x13\xDC\
+                                  \x90\xFA\x9E\x8B\x87\x2B\xFB\x8F";
+        let pkh: [u8; 32] = match get_config_type() {
             ConfigType::S => {
-                let random: [u8; 64] = *b"\x5E\x97\x5E\x8F\xAC\x3E\x0E\x56\
-                                          \x7B\x4E\xD0\x23\x86\xFB\x6A\x58\
-                                          \xBE\x85\xE6\x30\x37\x3F\x1C\x7D\
-                                          \x35\xF2\xBD\x8F\x3D\x4E\xBB\x3E\
-                                          \x4A\xA5\x08\x42\x0C\xAF\xED\xC8\
-                                          \x02\x46\x87\x0B\x96\xF8\xDB\xFE\
-                                          \xB4\x18\x0B\xD1\x55\xCE\xFD\x08\
-                                          \x2E\x13\xAC\xE4\x7F\x39\xB0\x0E";
-                let pkh: [u8; 32] = *b"\xF3\x6C\xD0\xE8\x4D\x6B\xE4\x13\
-                                       \x30\x65\x00\x88\xA6\x48\x0B\x38\
-                                       \x91\x68\x9C\x18\xB0\x20\xE2\xD3\
-                                       \x21\xF9\xD0\xB4\x69\x98\x3D\xC7";
-                (random, pkh)
+                *b"\xDB\x9E\xBB\x0D\xB2\xB1\xD2\x31\
+                   \x9E\xFB\x26\xCD\xA6\x5C\x0F\x50\
+                   \xFD\xA6\xD0\x4F\x60\x9E\xF0\x30\
+                   \xE9\x38\xF1\x92\xF6\xF9\xAB\x77"
             }
             ConfigType::M => {
-                let random: [u8; 64] = *b"\x82\xD0\x0C\x6C\x85\x57\x72\xBF\
-                                          \x95\x0F\x54\x07\x1D\xF6\xCE\x12\
-                                          \x2E\xE3\xFE\xCE\x15\x7F\xFA\xA0\
-                                          \x55\xA1\x17\x09\x6F\xC1\xC5\xA0\
-                                          \x47\x5D\xA7\xEB\x7C\xE1\xF0\xDC\
-                                          \xBA\x49\xE8\xC9\xB4\x6F\x78\x6C\
-                                          \xC4\xD6\x9A\x3E\xCD\x96\x78\xFB\
-                                          \xB9\x58\x85\x66\x49\xE2\x24\x6C";
-                let pkh: [u8; 32] = *b"\x15\x88\xAB\x53\x4D\xF9\xD4\xE1\
-                                       \x17\x0F\x8A\x7F\xB4\x38\x55\x5B\
-                                       \x3E\x02\xEB\x5F\x1D\x00\xC3\x4F\
-                                       \x2B\x86\x6D\x5D\x25\x64\x55\xC8";
-                (random, pkh)
+                *b"\xDA\x70\xD0\x51\x6F\xBC\xEE\x17\
+                   \x4A\x68\xE4\xC5\x6F\xBF\x7A\x1C\
+                   \x0E\x9A\x04\x84\x2E\x95\x78\xD9\
+                   \xB6\xE2\x19\x5A\xCD\xF2\x69\x7B"
             }
             ConfigType::L => {
-                let random: [u8; 64] = *b"\x8C\x6A\xEC\xA7\x87\xF8\x42\xC3\
-                                          \x7A\x0F\xA7\xBB\x59\x7B\xBF\xB2\
-                                          \x5B\xF1\x53\xD8\x0C\x30\xE5\x62\
-                                          \xFF\x99\xC9\x61\xC5\x63\x50\x63\
-                                          \xEF\x90\x3D\x2E\x3F\xDE\xA3\x97\
-                                          \xE1\x9A\xF8\xC8\xF2\x7E\x81\x25\
-                                          \xC1\xC1\x64\x79\x82\xFD\x98\x68\
-                                          \x61\x89\x4E\xD9\x29\xE5\x5E\x41";
-                let pkh: [u8; 32] = *b"\xBD\x6F\x26\xD0\x87\xFE\xA3\x4F\
-                                       \x75\xEA\x24\x71\x9C\x0D\xA2\x80\
-                                       \x67\x71\xEE\x84\x8B\x8D\x9D\xEE\
-                                       \xD8\xA4\x47\x4D\xDB\x85\xA2\x9B";
-                (random, pkh)
+                *b"\x30\x33\xC3\xA5\x79\x09\x6C\x92\
+                   \x4E\x99\x87\x61\xE8\x7E\x42\x60\
+                   \xF0\xF7\xC3\xC5\x3D\x0E\x21\xFE\
+                   \xD8\xDF\x4C\xD6\xCB\x20\x69\xD9"
             }
             ConfigType::Unknown => unimplemented!(),
         };
@@ -284,52 +265,21 @@ mod tests {
     fn test_sign_kat() {
         use hex;
 
-        let (random, msg, hex_file) = match get_config_type() {
-            ConfigType::S => {
-                let random: [u8; 64] = *b"\x5E\x97\x5E\x8F\xAC\x3E\x0E\x56\
-                                          \x7B\x4E\xD0\x23\x86\xFB\x6A\x58\
-                                          \xBE\x85\xE6\x30\x37\x3F\x1C\x7D\
-                                          \x35\xF2\xBD\x8F\x3D\x4E\xBB\x3E\
-                                          \x4A\xA5\x08\x42\x0C\xAF\xED\xC8\
-                                          \x02\x46\x87\x0B\x96\xF8\xDB\xFE\
-                                          \xB4\x18\x0B\xD1\x55\xCE\xFD\x08\
-                                          \x2E\x13\xAC\xE4\x7F\x39\xB0\x0E";
-                let msg = hex::decode(
-                    "D81C4D8D734FCBFBEADE3D3F8A039FAA2A2C9957E835AD55B22E75BF57BB556AC8",
-                ).unwrap();
-                let hex_file = include_str!("../test_files/test_sign_kat_S.hex");
-                (random, msg, hex_file)
-            }
-            ConfigType::M => {
-                let random: [u8; 64] = *b"\x82\xD0\x0C\x6C\x85\x57\x72\xBF\
-                                          \x95\x0F\x54\x07\x1D\xF6\xCE\x12\
-                                          \x2E\xE3\xFE\xCE\x15\x7F\xFA\xA0\
-                                          \x55\xA1\x17\x09\x6F\xC1\xC5\xA0\
-                                          \x47\x5D\xA7\xEB\x7C\xE1\xF0\xDC\
-                                          \xBA\x49\xE8\xC9\xB4\x6F\x78\x6C\
-                                          \xC4\xD6\x9A\x3E\xCD\x96\x78\xFB\
-                                          \xB9\x58\x85\x66\x49\xE2\x24\x6C";
-                let msg = hex::decode(
-                    "D81C4D8D734FCBFBEADE3D3F8A039FAA2A2C9957E835AD55B22E75BF57BB556AC8",
-                ).unwrap();
-                let hex_file = include_str!("../test_files/test_sign_kat_M.hex");
-                (random, msg, hex_file)
-            }
-            ConfigType::L => {
-                let random: [u8; 64] = *b"\x8C\x6A\xEC\xA7\x87\xF8\x42\xC3\
-                                          \x7A\x0F\xA7\xBB\x59\x7B\xBF\xB2\
-                                          \x5B\xF1\x53\xD8\x0C\x30\xE5\x62\
-                                          \xFF\x99\xC9\x61\xC5\x63\x50\x63\
-                                          \xEF\x90\x3D\x2E\x3F\xDE\xA3\x97\
-                                          \xE1\x9A\xF8\xC8\xF2\x7E\x81\x25\
-                                          \xC1\xC1\x64\x79\x82\xFD\x98\x68\
-                                          \x61\x89\x4E\xD9\x29\xE5\x5E\x41";
-                let msg = hex::decode(
-                    "D81C4D8D734FCBFBEADE3D3F8A039FAA2A2C9957E835AD55B22E75BF57BB556AC8",
-                ).unwrap();
-                let hex_file = include_str!("../test_files/test_sign_kat_L.hex");
-                (random, msg, hex_file)
-            }
+        let random: [u8; 64] = *b"\x7C\x99\x35\xA0\xB0\x76\x94\xAA\
+                                  \x0C\x6D\x10\xE4\xDB\x6B\x1A\xDD\
+                                  \x2F\xD8\x1A\x25\xCC\xB1\x48\x03\
+                                  \x2D\xCD\x73\x99\x36\x73\x7F\x2D\
+                                  \x86\x26\xED\x79\xD4\x51\x14\x08\
+                                  \x00\xE0\x3B\x59\xB9\x56\xF8\x21\
+                                  \x0E\x55\x60\x67\x40\x7D\x13\xDC\
+                                  \x90\xFA\x9E\x8B\x87\x2B\xFB\x8F";
+        let msg = hex::decode(
+            "D81C4D8D734FCBFBEADE3D3F8A039FAA2A2C9957E835AD55B22E75BF57BB556AC8",
+        ).unwrap();
+        let hex_file = match get_config_type() {
+            ConfigType::S => include_str!("../test_files/test_sign_kat_S.hex"),
+            ConfigType::M => include_str!("../test_files/test_sign_kat_M.hex"),
+            ConfigType::L => include_str!("../test_files/test_sign_kat_L.hex"),
             ConfigType::Unknown => unimplemented!(),
         };
 
