@@ -27,7 +27,7 @@ pub const GRAVITY_C: usize = C;
 pub const GRAVITY_D: usize = D;
 const GRAVITY_HD: usize = MERKLE_H * GRAVITY_D;
 // Note: dirty hack to avoid shift overflow when GRAVITY_H = 64
-pub static GRAVITY_MASK: u64 = 0xFFFF_FFFF_FFFF_FFFF_u64 ^
+pub const GRAVITY_MASK: u64 = 0xFFFF_FFFF_FFFF_FFFF_u64 ^
     ((0xFFFF_FFFF_FFFF_FFFF_u64 << GRAVITY_HD) << GRAVITY_C);
 
 
