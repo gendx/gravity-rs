@@ -1,11 +1,11 @@
+use address;
+use config::*;
 use hash;
 use hash::Hash;
-use address;
-use prng;
 use merkle;
 use pors;
+use prng;
 use subtree;
-use config::*;
 
 pub struct SecKey {
     seed: Hash,
@@ -25,8 +25,12 @@ pub struct Signature {
 impl SecKey {
     pub fn new(random: &[u8; 64]) -> Self {
         let mut sk = SecKey {
-            seed: Hash { h: *array_ref![random, 0, 32] },
-            salt: Hash { h: *array_ref![random, 32, 32] },
+            seed: Hash {
+                h: *array_ref![random, 0, 32],
+            },
+            salt: Hash {
+                h: *array_ref![random, 32, 32],
+            },
             cache: merkle::MerkleTree::new(GRAVITY_C),
         };
 
@@ -45,7 +49,9 @@ impl SecKey {
     }
 
     pub fn genpk(&self) -> PubKey {
-        PubKey { h: self.cache.root() }
+        PubKey {
+            h: self.cache.root(),
+        }
     }
 
     pub fn sign_hash(&self, msg: &Hash) -> Signature {
@@ -133,7 +139,6 @@ impl Signature {
         Some(sign)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -270,9 +275,8 @@ mod tests {
                                   \x00\xE0\x3B\x59\xB9\x56\xF8\x21\
                                   \x0E\x55\x60\x67\x40\x7D\x13\xDC\
                                   \x90\xFA\x9E\x8B\x87\x2B\xFB\x8F";
-        let msg = hex::decode(
-            "D81C4D8D734FCBFBEADE3D3F8A039FAA2A2C9957E835AD55B22E75BF57BB556AC8",
-        ).unwrap();
+        let msg = hex::decode("D81C4D8D734FCBFBEADE3D3F8A039FAA2A2C9957E835AD55B22E75BF57BB556AC8")
+            .unwrap();
         let hex_file = match get_config_type() {
             ConfigType::S => include_str!("../test_files/test_sign_kat_S.hex"),
             ConfigType::M => include_str!("../test_files/test_sign_kat_M.hex"),

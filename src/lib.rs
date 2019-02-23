@@ -4,21 +4,21 @@
 #[macro_use]
 extern crate arrayref;
 extern crate byteorder;
-extern crate sha2;
 extern crate hex;
+extern crate sha2;
 
-mod config;
-mod primitives;
-mod hash;
 mod address;
-mod prng;
+mod config;
+mod gravity;
+mod hash;
 mod ltree;
 mod merkle;
 mod octopus;
-mod wots;
 mod pors;
+mod primitives;
+mod prng;
 mod subtree;
-mod gravity;
+mod wots;
 
 pub fn gravity_genpk(public: &mut [u8; 32], secret: &[u8; 64]) {
     let sk = gravity::SecKey::new(&secret);
@@ -35,14 +35,15 @@ pub fn gravity_sign(secret: &[u8; 64], msg: &[u8]) -> Vec<u8> {
 }
 
 pub fn gravity_verify(public: &[u8; 32], msg: &[u8], sign_bytes: Vec<u8>) -> bool {
-    let pk = gravity::PubKey { h: hash::Hash { h: *public } };
+    let pk = gravity::PubKey {
+        h: hash::Hash { h: *public },
+    };
     if let Some(sign) = gravity::Signature::deserialize(&mut sign_bytes.iter()) {
         pk.verify_bytes(&sign, msg)
     } else {
         false
     }
 }
-
 
 #[cfg(test)]
 mod tests {

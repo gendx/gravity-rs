@@ -1,9 +1,9 @@
 use byteorder::{ByteOrder, LittleEndian};
-use std::mem;
+use config::*;
 use hash;
 use hash::Hash;
 use merkle;
-use config::*;
+use std::mem;
 
 #[derive(Default, Debug, PartialEq)]
 pub struct Octopus {
@@ -148,9 +148,12 @@ pub fn merkle_compress_octopus(
         count = j;
     }
 
-    if len == octolen { Some(nodes[0]) } else { None }
+    if len == octolen {
+        Some(nodes[0])
+    } else {
+        None
+    }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -195,7 +198,12 @@ mod tests {
         let src = [h0, h1, h2, h3, h4, h5, h6, h7];
         let mut octopus = Default::default();
         let root = merkle_gen_octopus_leaves(&mut octopus, &src, 3, &mut [0, 2, 3, 6]);
-        assert_eq!(octopus, Octopus { oct: vec![h1, h7, h10] });
+        assert_eq!(
+            octopus,
+            Octopus {
+                oct: vec![h1, h7, h10]
+            }
+        );
         assert_eq!(root, h14);
     }
 

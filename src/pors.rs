@@ -1,11 +1,11 @@
-use byteorder::{ByteOrder, BigEndian};
+use address;
+use byteorder::{BigEndian, ByteOrder};
+use config::*;
 use hash;
 use hash::Hash;
 use merkle;
 use octopus;
-use address;
 use prng;
-use config::*;
 
 pub struct SecKey {
     values: Vec<Hash>,
@@ -21,7 +21,9 @@ pub struct Signature {
 
 impl SecKey {
     pub fn new(prng: &prng::Prng, address: &address::Address) -> Self {
-        let mut sk = SecKey { values: vec![Default::default(); PORS_T] };
+        let mut sk = SecKey {
+            values: vec![Default::default(); PORS_T],
+        };
         prng.genblocks(sk.values.as_mut_slice(), address);
         sk
     }
@@ -99,7 +101,6 @@ impl Signature {
     }
 }
 
-
 pub fn sign(prng: &prng::Prng, salt: &Hash, msg: &Hash) -> (address::Address, Hash, Signature) {
     let pepper = hash::hash_2n_to_n_ret(&salt, &msg);
     let (address, subset) = obtain_address_subset(&pepper, &msg);
@@ -108,7 +109,6 @@ pub fn sign(prng: &prng::Prng, salt: &Hash, msg: &Hash) -> (address::Address, Ha
     let (root, sign) = sk.sign_subset(pepper, subset);
     (address, root, sign)
 }
-
 
 fn obtain_address_subset(pepper: &Hash, msg: &Hash) -> (address::Address, [usize; PORS_K]) {
     // TODO: use some kind of static_assert instead
@@ -155,7 +155,6 @@ fn obtain_address_subset(pepper: &Hash, msg: &Hash) -> (address::Address, [usize
     subset.sort();
     (address::Address::new(GRAVITY_D as u32, instance), subset)
 }
-
 
 #[cfg(test)]
 mod tests {

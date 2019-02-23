@@ -1,9 +1,9 @@
-use hash::Hash;
 use address;
-use prng;
-use merkle;
-use wots;
 use config::*;
+use hash::Hash;
+use merkle;
+use prng;
+use wots;
 
 pub struct SecKey<'a> {
     prng: &'a prng::Prng,
@@ -94,7 +94,6 @@ impl Signature {
         Some(sign)
     }
 }
-
 
 #[cfg(test)]
 mod tests {

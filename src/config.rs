@@ -5,7 +5,6 @@ const H: usize = 5; // 5 is often good
 const D: usize = 1;
 const C: usize = 10;
 
-
 /* Don't modify */
 pub const HASH_SIZE: usize = 32; // Only implemented for 32
 
@@ -27,9 +26,8 @@ pub const GRAVITY_C: usize = C;
 pub const GRAVITY_D: usize = D;
 const GRAVITY_HD: usize = MERKLE_H * GRAVITY_D;
 // Note: dirty hack to avoid shift overflow when GRAVITY_H = 64
-pub const GRAVITY_MASK: u64 = 0xFFFF_FFFF_FFFF_FFFF_u64 ^
-    ((0xFFFF_FFFF_FFFF_FFFF_u64 << GRAVITY_HD) << GRAVITY_C);
-
+pub const GRAVITY_MASK: u64 =
+    0xFFFF_FFFF_FFFF_FFFF_u64 ^ ((0xFFFF_FFFF_FFFF_FFFF_u64 << GRAVITY_HD) << GRAVITY_C);
 
 #[cfg(test)]
 #[derive(Debug, PartialEq)]
@@ -49,7 +47,6 @@ pub fn get_config_type() -> ConfigType {
         _ => ConfigType::Unknown,
     }
 }
-
 
 #[cfg(test)]
 mod tests {

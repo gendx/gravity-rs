@@ -116,7 +116,6 @@ pub fn aes256_ret(src: &[u8; 16], key: &[u8; 32]) -> [u8; 16] {
     dst
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -161,22 +160,7 @@ mod tests {
     fn test_subbytes() {
         let mut state = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         let expect = [
-            99,
-            124,
-            119,
-            123,
-            242,
-            107,
-            111,
-            197,
-            48,
-            1,
-            103,
-            43,
-            254,
-            215,
-            171,
-            118,
+            99, 124, 119, 123, 242, 107, 111, 197, 48, 1, 103, 43, 254, 215, 171, 118,
         ];
         subbytes(&mut state);
         assert_eq!(state, expect);

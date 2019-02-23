@@ -37,7 +37,6 @@ pub fn ltree_leaves_ret(leaves: &[Hash]) -> Hash {
     root
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

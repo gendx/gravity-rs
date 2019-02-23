@@ -1,6 +1,6 @@
-mod u64x2;
-mod intrinsics;
+pub mod aes256;
 mod constants;
 pub mod haraka256;
 pub mod haraka512;
-pub mod aes256;
+mod intrinsics;
+mod u64x2;

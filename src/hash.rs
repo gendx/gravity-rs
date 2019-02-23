@@ -1,8 +1,8 @@
 use config;
 use primitives::haraka256;
 use primitives::haraka512;
+use sha2::{Digest, Sha256};
 use std::fmt;
-use sha2::{Sha256, Digest};
 
 #[derive(Clone, Copy, Default, PartialEq)]
 pub struct Hash {
@@ -37,7 +37,9 @@ impl Hash {
 
 pub fn long_hash(src: &[u8]) -> Hash {
     let digest = Sha256::digest(src);
-    Hash { h: *array_ref![digest, 0, config::HASH_SIZE] }
+    Hash {
+        h: *array_ref![digest, 0, config::HASH_SIZE],
+    }
 }
 
 pub fn hash_n_to_n(dst: &mut Hash, src: &Hash) {
@@ -110,7 +112,6 @@ pub fn hash_compress_pairs(dst: &mut [Hash], src: &[Hash], count: usize) {
         hash_2n_to_n(&mut dst[i], &src[2 * i], &src[2 * i + 1]);
     }
 }
-
 
 #[cfg(test)]
 pub mod tests {

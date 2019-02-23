@@ -1,6 +1,6 @@
+use address;
 use hash::Hash;
 use primitives::aes256;
-use address;
 
 #[derive(Default)]
 pub struct Prng {
@@ -35,7 +35,6 @@ impl Prng {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -109,7 +108,8 @@ mod tests {
             "b53cb99417a048bb15cfd6736804f6af990ff34be63fc19cb626381935d550ca\
              983118485ada760182fb24cc2899158bb44ca576ec99a8a9775897a34d62cc4c\
              bd4071f05445d2eb4922114e2f847347a63ea10249474f55f9d6ca81cf66a3ca",
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(dst[0].h, *array_ref![expect, 0, 32]);
         assert_eq!(dst[1].h, *array_ref![expect, 32, 32]);

@@ -1,5 +1,5 @@
-use std::ptr::copy_nonoverlapping;
 use std::mem;
+use std::ptr::copy_nonoverlapping;
 
 #[allow(non_camel_case_types)]
 #[repr(simd)]

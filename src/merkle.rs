@@ -144,7 +144,6 @@ pub fn merkle_compress_auth(
     index
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

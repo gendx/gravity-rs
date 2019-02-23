@@ -1,4 +1,4 @@
-use byteorder::{ByteOrder, BigEndian};
+use byteorder::{BigEndian, ByteOrder};
 use std::fmt;
 
 #[derive(PartialEq)]
@@ -12,8 +12,7 @@ impl fmt::Debug for Address {
         write!(
             f,
             "{{ instance: 0x{:x}, layer: {} }}",
-            self.instance,
-            self.layer
+            self.instance, self.layer
         )
     }
 }
@@ -56,7 +55,6 @@ impl Address {
         block
     }
 }
-
 
 #[cfg(test)]
 mod tests {
