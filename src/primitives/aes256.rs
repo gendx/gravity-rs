@@ -373,4 +373,42 @@ mod tests {
         expand256_bis(&key, &mut rkeys_bis);
         assert_eq!(rkeys, rkeys_bis);
     }
+
+    use test::Bencher;
+
+    #[bench]
+    fn bench_expand256(b: &mut Bencher) {
+        let key = b"\x00\x01\x02\x03\x04\x05\x06\x07\
+                    \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\
+                    \x10\x11\x12\x13\x14\x15\x16\x17\
+                    \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
+        let mut rkeys = [u64x2(0, 0); 15];
+        b.iter(|| expand256(key, &mut rkeys));
+    }
+
+    #[bench]
+    fn bench_aes256_rkeys_xmm(b: &mut Bencher) {
+        let src = b"\x00\x01\x02\x03\x04\x05\x06\x07\
+                    \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f";
+        let key = b"\x00\x01\x02\x03\x04\x05\x06\x07\
+                    \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\
+                    \x10\x11\x12\x13\x14\x15\x16\x17\
+                    \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
+        let mut rkeys = [u64x2(0, 0); 15];
+        expand256(key, &mut rkeys);
+
+        let mut dst = [0u8; 16];
+        b.iter(|| aes256_rkeys_xmm(&mut dst, src, &rkeys));
+    }
+
+    #[bench]
+    fn bench_aes256(b: &mut Bencher) {
+        let src = b"\x00\x01\x02\x03\x04\x05\x06\x07\
+                    \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f";
+        let key = b"\x00\x01\x02\x03\x04\x05\x06\x07\
+                    \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\
+                    \x10\x11\x12\x13\x14\x15\x16\x17\
+                    \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
+        b.iter(|| aes256_ret(src, key));
+    }
 }

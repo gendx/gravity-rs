@@ -233,4 +233,90 @@ mod tests {
             }
         }
     }
+
+    use super::super::{address, prng};
+    use byteorder::{BigEndian, ByteOrder};
+    use test::Bencher;
+
+    #[bench]
+    fn bench_merkle_gen_octopus_8(b: &mut Bencher) {
+        const HEIGHT: usize = 3;
+        let src = [hash::tests::HASH_ELEMENT; 1 << HEIGHT];
+        let mut octopus = Default::default();
+        let mut indices = [0, 2, 3, 6];
+        b.iter(|| merkle_gen_octopus_leaves(&mut octopus, &src, HEIGHT, &mut indices));
+    }
+
+    #[bench]
+    fn bench_merkle_gen_octopus_pors(b: &mut Bencher) {
+        let src = vec![hash::tests::HASH_ELEMENT; PORS_T];
+        let mut buf = merkle::MerkleBuf::new(PORS_TAU);
+        hash::hash_parallel(buf.slice_leaves_mut(), &src, PORS_T);
+
+        let mut subset = fake_pors_subset();
+        let mut octopus = Default::default();
+        b.iter(|| merkle_gen_octopus(&mut octopus, &mut buf, &mut subset));
+    }
+
+    #[bench]
+    fn bench_merkle_compress_octopus_8(b: &mut Bencher) {
+        const HEIGHT: usize = 3;
+        let src = [hash::tests::HASH_ELEMENT; 1 << HEIGHT];
+        let mut indices = [0, 2, 3];
+
+        let mut octopus = Default::default();
+        let _ = merkle_gen_octopus_leaves(&mut octopus, &src, HEIGHT, &mut indices.clone());
+
+        let mut nodes: Vec<_> = indices.iter().map(|&i| src[i]).collect();
+        b.iter(|| merkle_compress_octopus(&mut nodes, &octopus, HEIGHT, &mut indices));
+    }
+
+    #[bench]
+    fn bench_merkle_compress_octopus_pors(b: &mut Bencher) {
+        let src = vec![hash::tests::HASH_ELEMENT; PORS_T];
+        let mut buf = merkle::MerkleBuf::new(PORS_TAU);
+        hash::hash_parallel(buf.slice_leaves_mut(), &src, PORS_T);
+
+        let mut subset = fake_pors_subset();
+        let mut octopus = Default::default();
+        merkle_gen_octopus(&mut octopus, &mut buf, &mut subset.clone());
+
+        let mut nodes: Vec<_> = subset.iter().map(|&i| src[i]).collect();
+        b.iter(|| merkle_compress_octopus(&mut nodes, &octopus, PORS_TAU, &mut subset));
+    }
+
+    fn fake_pors_subset() -> [usize; PORS_K] {
+        let seed = hash::tests::HASH_ELEMENT;
+        let prng = prng::Prng::new(&seed);
+        let address = address::Address::new(0, 0);
+
+        let mut subset: [usize; PORS_K] = [0; PORS_K];
+        let mut count = 0;
+        let mut counter = 1;
+        let mut block = Default::default();
+
+        'outer: while count < PORS_K {
+            prng.genblock(&mut block, &address, counter);
+            'inner: for i in 0..8 {
+                let x = BigEndian::read_u32(array_ref![block.h, 4 * i, 4]) as usize;
+                let x = x % PORS_T;
+
+                for i in 0..count {
+                    if subset[i] == x {
+                        continue 'inner;
+                    }
+                }
+
+                subset[count] = x;
+                count += 1;
+                if count == PORS_K {
+                    break 'outer;
+                }
+            }
+            counter += 1;
+        }
+
+        subset.sort();
+        subset
+    }
 }

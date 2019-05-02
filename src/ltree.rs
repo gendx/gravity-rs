@@ -100,4 +100,31 @@ mod tests {
         let dst = ltree_leaves_ret(&[h0; 6]);
         assert_eq!(dst, h192);
     }
+
+    use super::super::config;
+    use test::Bencher;
+
+    #[bench]
+    fn bench_ltree_1(b: &mut Bencher) {
+        let h = [hash::tests::HASH_ELEMENT; 1];
+        b.iter(|| ltree_leaves_ret(&h));
+    }
+
+    #[bench]
+    fn bench_ltree_5(b: &mut Bencher) {
+        let h = [hash::tests::HASH_ELEMENT; 5];
+        b.iter(|| ltree_leaves_ret(&h));
+    }
+
+    #[bench]
+    fn bench_ltree_20(b: &mut Bencher) {
+        let h = [hash::tests::HASH_ELEMENT; 20];
+        b.iter(|| ltree_leaves_ret(&h));
+    }
+
+    #[bench]
+    fn bench_ltree_wots(b: &mut Bencher) {
+        let h = [hash::tests::HASH_ELEMENT; config::WOTS_ELL];
+        b.iter(|| ltree_leaves_ret(&h));
+    }
 }

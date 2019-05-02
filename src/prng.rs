@@ -38,12 +38,11 @@ impl Prng {
 
 #[cfg(test)]
 mod tests {
+    use super::super::hash;
     use super::*;
 
     #[test]
     fn test_genblock_zero() {
-        use hash;
-
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
         let mut dst = Default::default();
         prng.genblock(&mut dst, &address::Address::new(0, 0), 0);
@@ -66,8 +65,6 @@ mod tests {
 
     #[test]
     fn test_genblocks() {
-        use hash;
-
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
         let mut dst = [Default::default(); 3];
         prng.genblocks(&mut dst, &address::Address::new(0, 0));
@@ -94,7 +91,6 @@ mod tests {
 
     #[test]
     fn test_kat() {
-        use hash;
         use hex;
 
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
@@ -114,5 +110,43 @@ mod tests {
         assert_eq!(dst[0].h, *array_ref![expect, 0, 32]);
         assert_eq!(dst[1].h, *array_ref![expect, 32, 32]);
         assert_eq!(dst[2].h, *array_ref![expect, 64, 32]);
+    }
+
+    use super::super::config;
+    use test::Bencher;
+
+    #[bench]
+    fn bench_genblock(b: &mut Bencher) {
+        let prng = Prng::new(&hash::tests::HASH_ELEMENT);
+        let mut dst = Default::default();
+        b.iter(|| prng.genblock(&mut dst, &address::Address::new(0, 0), 0));
+    }
+
+    #[bench]
+    fn bench_genblocks_5(b: &mut Bencher) {
+        let prng = Prng::new(&hash::tests::HASH_ELEMENT);
+        let mut dst = [Default::default(); 5];
+        b.iter(|| prng.genblocks(&mut dst, &address::Address::new(0, 0)));
+    }
+
+    #[bench]
+    fn bench_genblocks_20(b: &mut Bencher) {
+        let prng = Prng::new(&hash::tests::HASH_ELEMENT);
+        let mut dst = [Default::default(); 20];
+        b.iter(|| prng.genblocks(&mut dst, &address::Address::new(0, 0)));
+    }
+
+    #[bench]
+    fn bench_genblocks_pors(b: &mut Bencher) {
+        let prng = Prng::new(&hash::tests::HASH_ELEMENT);
+        let mut dst = vec![Default::default(); config::PORS_T];
+        b.iter(|| prng.genblocks(&mut dst, &address::Address::new(0, 0)));
+    }
+
+    #[bench]
+    fn bench_genblocks_wots(b: &mut Bencher) {
+        let prng = Prng::new(&hash::tests::HASH_ELEMENT);
+        let mut dst = [Default::default(); config::WOTS_ELL];
+        b.iter(|| prng.genblocks(&mut dst, &address::Address::new(0, 0)));
     }
 }

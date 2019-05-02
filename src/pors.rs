@@ -177,5 +177,91 @@ mod tests {
         assert!(pk.verify(&sign, &msg));
     }
 
+    use test::Bencher;
+
+    #[bench]
+    fn bench_obtain_address_subset(b: &mut Bencher) {
+        let salt = hash::tests::HASH_ELEMENT;
+        let msg = hash::tests::HASH_ELEMENT;
+
+        let pepper = hash::hash_2n_to_n_ret(&salt, &msg);
+        b.iter(|| obtain_address_subset(&pepper, &msg));
+    }
+
+    #[bench]
+    fn bench_keypair(b: &mut Bencher) {
+        let seed = hash::tests::HASH_ELEMENT;
+        let salt = hash::tests::HASH_ELEMENT;
+        let msg = hash::tests::HASH_ELEMENT;
+
+        let prng = prng::Prng::new(&seed);
+        b.iter(|| {
+            let pepper = hash::hash_2n_to_n_ret(&salt, &msg);
+            let (address, _) = obtain_address_subset(&pepper, &msg);
+
+            let sk = SecKey::new(&prng, &address);
+            sk.genpk()
+        });
+    }
+
+    #[bench]
+    fn bench_gensk(b: &mut Bencher) {
+        let seed = hash::tests::HASH_ELEMENT;
+        let salt = hash::tests::HASH_ELEMENT;
+        let msg = hash::tests::HASH_ELEMENT;
+
+        let prng = prng::Prng::new(&seed);
+        b.iter(|| {
+            let pepper = hash::hash_2n_to_n_ret(&salt, &msg);
+            let (address, _) = obtain_address_subset(&pepper, &msg);
+
+            SecKey::new(&prng, &address)
+        });
+    }
+
+    #[bench]
+    fn bench_genpk(b: &mut Bencher) {
+        let seed = hash::tests::HASH_ELEMENT;
+        let salt = hash::tests::HASH_ELEMENT;
+        let msg = hash::tests::HASH_ELEMENT;
+
+        let prng = prng::Prng::new(&seed);
+        let pepper = hash::hash_2n_to_n_ret(&salt, &msg);
+        let (address, _) = obtain_address_subset(&pepper, &msg);
+
+        let sk = SecKey::new(&prng, &address);
+        b.iter(|| sk.genpk());
+    }
+
+    #[bench]
+    fn bench_sign(b: &mut Bencher) {
+        let seed = hash::tests::HASH_ELEMENT;
+        let salt = hash::tests::HASH_ELEMENT;
+        let msg = hash::tests::HASH_ELEMENT;
+
+        let prng = prng::Prng::new(&seed);
+        let pepper = hash::hash_2n_to_n_ret(&salt, &msg);
+        let (address, subset) = obtain_address_subset(&pepper, &msg);
+
+        let sk = SecKey::new(&prng, &address);
+        b.iter(|| sk.sign_subset(pepper, subset));
+    }
+
+    #[bench]
+    fn bench_verify(b: &mut Bencher) {
+        let seed = hash::tests::HASH_ELEMENT;
+        let salt = hash::tests::HASH_ELEMENT;
+        let msg = hash::tests::HASH_ELEMENT;
+
+        let prng = prng::Prng::new(&seed);
+        let pepper = hash::hash_2n_to_n_ret(&salt, &msg);
+        let (address, subset) = obtain_address_subset(&pepper, &msg);
+
+        let sk = SecKey::new(&prng, &address);
+        let pk = sk.genpk();
+        let (_, sign) = sk.sign_subset(pepper, subset);
+        b.iter(|| pk.verify(&sign, &msg));
+    }
+
     // TODO: test vectors
 }

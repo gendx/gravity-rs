@@ -297,4 +297,34 @@ mod tests {
 
         assert_eq!(sign_bytes, expect);
     }
+
+    use test::Bencher;
+
+    #[cfg(feature = "bigbench")]
+    #[bench]
+    fn bench_keypair(b: &mut Bencher) {
+        let seed = [0u8; 64];
+        b.iter(|| {
+            let sk = SecKey::new(&seed);
+            sk.genpk()
+        });
+    }
+
+    #[bench]
+    fn bench_sign(b: &mut Bencher) {
+        let seed = [0u8; 64];
+        let sk = SecKey::new(&seed);
+        let msg = hash::tests::HASH_ELEMENT;
+        b.iter(|| sk.sign_hash(&msg));
+    }
+
+    #[bench]
+    fn bench_verify(b: &mut Bencher) {
+        let seed = [0u8; 64];
+        let sk = SecKey::new(&seed);
+        let pk = sk.genpk();
+        let msg = hash::tests::HASH_ELEMENT;
+        let sign = sk.sign_hash(&msg);
+        b.iter(|| pk.verify_hash(&sign, &msg));
+    }
 }

@@ -1,11 +1,14 @@
 #![feature(asm)]
 #![feature(repr_simd)]
+#![feature(test)]
 
 #[macro_use]
 extern crate arrayref;
 extern crate byteorder;
 extern crate hex;
 extern crate sha2;
+#[cfg(test)]
+extern crate test;
 
 mod address;
 mod config;

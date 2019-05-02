@@ -97,12 +97,11 @@ impl Signature {
 
 #[cfg(test)]
 mod tests {
+    use super::super::hash;
     use super::*;
 
     #[test]
     fn test_sign_verify() {
-        use hash;
-
         let seed = hash::tests::HASH_ELEMENT;
         let layer: u32 = 0x01020304;
         let instance: u64 = 0x05060708090a0b0c;
@@ -116,6 +115,51 @@ mod tests {
         let (root, sign) = sk.sign(&address, &msg);
         assert_eq!(root, pk.h);
         assert!(pk.verify(&address, &sign, &msg));
+    }
+
+    use test::Bencher;
+
+    #[bench]
+    fn bench_genpk(b: &mut Bencher) {
+        let seed = hash::tests::HASH_ELEMENT;
+        let layer: u32 = 0x01020304;
+        let instance: u64 = 0x05060708090a0b0c;
+
+        let prng = prng::Prng::new(&seed);
+        let address = address::Address::new(layer, instance);
+
+        let sk = SecKey::new(&prng);
+        b.iter(|| sk.genpk(&address));
+    }
+
+    #[bench]
+    fn bench_sign(b: &mut Bencher) {
+        let seed = hash::tests::HASH_ELEMENT;
+        let layer: u32 = 0x01020304;
+        let instance: u64 = 0x05060708090a0b0c;
+
+        let prng = prng::Prng::new(&seed);
+        let address = address::Address::new(layer, instance);
+
+        let sk = SecKey::new(&prng);
+        let msg = hash::tests::HASH_ELEMENT;
+        b.iter(|| sk.sign(&address, &msg));
+    }
+
+    #[bench]
+    fn bench_verify(b: &mut Bencher) {
+        let seed = hash::tests::HASH_ELEMENT;
+        let layer: u32 = 0x01020304;
+        let instance: u64 = 0x05060708090a0b0c;
+
+        let prng = prng::Prng::new(&seed);
+        let address = address::Address::new(layer, instance);
+
+        let sk = SecKey::new(&prng);
+        let pk = sk.genpk(&address);
+        let msg = hash::tests::HASH_ELEMENT;
+        let (_, sign) = sk.sign(&address, &msg);
+        b.iter(|| pk.verify(&address, &sign, &msg));
     }
 
     // TODO: test vectors

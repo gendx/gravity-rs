@@ -172,5 +172,80 @@ mod tests {
         assert_eq!(&lengths as &[usize], &expect as &[usize]);
     }
 
+    use test::Bencher;
+
+    #[bench]
+    fn bench_keypair(b: &mut Bencher) {
+        let seed = hash::tests::HASH_ELEMENT;
+        let layer: u32 = 0;
+        let instance: u64 = 0;
+
+        let prng = prng::Prng::new(&seed);
+        b.iter(|| {
+            let address = address::Address::new(layer, instance);
+            let sk = SecKey::new(&prng, &address);
+            sk.genpk()
+        });
+    }
+
+    #[bench]
+    fn bench_gensk(b: &mut Bencher) {
+        let seed = hash::tests::HASH_ELEMENT;
+        let layer: u32 = 0;
+        let instance: u64 = 0;
+
+        let prng = prng::Prng::new(&seed);
+        b.iter(|| {
+            let address = address::Address::new(layer, instance);
+            SecKey::new(&prng, &address)
+        });
+    }
+
+    #[bench]
+    fn bench_genpk(b: &mut Bencher) {
+        let seed = hash::tests::HASH_ELEMENT;
+        let layer: u32 = 0;
+        let instance: u64 = 0;
+
+        let prng = prng::Prng::new(&seed);
+        let address = address::Address::new(layer, instance);
+        let sk = SecKey::new(&prng, &address);
+        b.iter(|| sk.genpk());
+    }
+
+    #[bench]
+    fn bench_sign(b: &mut Bencher) {
+        let seed = hash::tests::HASH_ELEMENT;
+        let layer: u32 = 0;
+        let instance: u64 = 0;
+
+        let prng = prng::Prng::new(&seed);
+        let address = address::Address::new(layer, instance);
+        let sk = SecKey::new(&prng, &address);
+        let msg = hash::tests::HASH_ELEMENT;
+        b.iter(|| sk.sign(&msg));
+    }
+
+    #[bench]
+    fn bench_verify(b: &mut Bencher) {
+        let seed = hash::tests::HASH_ELEMENT;
+        let layer: u32 = 0;
+        let instance: u64 = 0;
+
+        let prng = prng::Prng::new(&seed);
+        let address = address::Address::new(layer, instance);
+        let sk = SecKey::new(&prng, &address);
+        let pk = sk.genpk();
+        let msg = hash::tests::HASH_ELEMENT;
+        let sign = sk.sign(&msg);
+        b.iter(|| pk.verify(&sign, &msg));
+    }
+
+    #[bench]
+    fn bench_split_msg(b: &mut Bencher) {
+        let msg = Hash { h: [0; HASH_SIZE] };
+        b.iter(|| split_msg(&msg));
+    }
+
     // TODO: test vectors
 }
