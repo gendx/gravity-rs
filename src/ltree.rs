@@ -24,9 +24,8 @@ fn ltree(root: &mut Hash, buf: &mut [Hash], mut count: usize) {
 pub fn ltree_leaves(root: &mut Hash, leaves: &[Hash]) {
     let count = leaves.len();
     let mut buf = vec![Default::default(); 2 * count];
-    for i in 0..count {
-        buf[i] = leaves[i];
-    }
+
+    buf[..count].copy_from_slice(&leaves[..count]);
 
     ltree(root, buf.as_mut_slice(), count)
 }
