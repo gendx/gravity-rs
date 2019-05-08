@@ -57,7 +57,7 @@ impl MerkleTree {
         for i in 0..self.height {
             let n = 1 << (self.height - 1 - i);
             {
-                let (mut dst, mut src) = self.nodes.split_at_mut(2 * n);
+                let (dst, src) = self.nodes.split_at_mut(2 * n);
                 hash::hash_compress_pairs(&mut dst[n..(2 * n)], src, n);
             }
         }
