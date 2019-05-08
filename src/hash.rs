@@ -95,8 +95,12 @@ pub fn hash_parallel_all(dst: &mut [Hash], src: &[Hash]) {
 
 #[inline(always)]
 fn hash_parallel_chains(dst: &mut [Hash], src: &[Hash], count: usize, chainlen: usize) {
-    for i in 0..count {
-        hash_n_to_n_chain(&mut dst[i], &src[i], chainlen);
+    dst[..count].copy_from_slice(&src[..count]);
+    for _ in 0..chainlen {
+        for i in 0..count {
+            let tmp = dst[i];
+            hash_n_to_n(&mut dst[i], &tmp);
+        }
     }
 }
 
