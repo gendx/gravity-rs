@@ -382,4 +382,143 @@ mod tests {
             assert_eq!(auth, expect);
         }
     }
+
+    use super::super::config;
+    use test::Bencher;
+
+    fn bench_merkle_compress_all(b: &mut Bencher, height: usize) {
+        let mut buf = MerkleBuf::new(height);
+        for leaf in buf.slice_leaves_mut() {
+            *leaf = hash::tests::HASH_ELEMENT;
+        }
+
+        let mut root = Default::default();
+        b.iter(|| {
+            merkle_compress_all(&mut root, &mut buf);
+            root
+        });
+    }
+
+    fn bench_merkle_gen_auth(b: &mut Bencher, height: usize, index: usize) {
+        // TODO: use const generic height once it's available.
+        let mut auth = vec![Default::default(); height];
+        let mut buf = MerkleBuf::new(height);
+        b.iter(|| merkle_gen_auth(&mut auth, &mut buf, index));
+    }
+
+    fn bench_merkle_gen_auth_first(b: &mut Bencher, height: usize) {
+        bench_merkle_gen_auth(b, height, 0);
+    }
+
+    fn bench_merkle_gen_auth_last(b: &mut Bencher, height: usize) {
+        bench_merkle_gen_auth(b, height, (1 << height) - 1);
+    }
+
+    fn bench_merkle_gen_auth_middle(b: &mut Bencher, height: usize) {
+        let mut index = 0;
+        for i in 0..height {
+            index <<= 1;
+            index |= i & 1;
+        }
+        bench_merkle_gen_auth(b, height, index);
+    }
+
+    fn bench_merkle_compress_auth(b: &mut Bencher, height: usize, index: usize) {
+        // TODO: use const generic height once it's available.
+        let auth = vec![hash::tests::HASH_ELEMENT; height];
+        let mut node = hash::tests::HASH_ELEMENT;
+        b.iter(|| {
+            merkle_compress_auth(&mut node, &auth, height, index);
+            node
+        });
+    }
+
+    fn bench_merkle_compress_auth_first(b: &mut Bencher, height: usize) {
+        bench_merkle_compress_auth(b, height, 0);
+    }
+
+    fn bench_merkle_compress_auth_last(b: &mut Bencher, height: usize) {
+        bench_merkle_compress_auth(b, height, (1 << height) - 1);
+    }
+
+    fn bench_merkle_compress_auth_middle(b: &mut Bencher, height: usize) {
+        let mut index = 0;
+        for i in 0..height {
+            index <<= 1;
+            index |= i & 1;
+        }
+        bench_merkle_compress_auth(b, height, index);
+    }
+
+    // SPHINCS subtree
+    #[bench]
+    fn bench_merkle_compress_all_subtree(b: &mut Bencher) {
+        bench_merkle_compress_all(b, config::MERKLE_H);
+    }
+
+    #[bench]
+    fn bench_merkle_gen_auth_subtree_first(b: &mut Bencher) {
+        bench_merkle_gen_auth_first(b, config::MERKLE_H);
+    }
+
+    #[bench]
+    fn bench_merkle_gen_auth_subtree_last(b: &mut Bencher) {
+        bench_merkle_gen_auth_last(b, config::MERKLE_H);
+    }
+
+    #[bench]
+    fn bench_merkle_gen_auth_subtree_middle(b: &mut Bencher) {
+        bench_merkle_gen_auth_middle(b, config::MERKLE_H);
+    }
+
+    #[bench]
+    fn bench_merkle_compress_auth_subtree_first(b: &mut Bencher) {
+        bench_merkle_compress_auth_first(b, config::MERKLE_H);
+    }
+
+    #[bench]
+    fn bench_merkle_compress_auth_subtree_last(b: &mut Bencher) {
+        bench_merkle_compress_auth_last(b, config::MERKLE_H);
+    }
+
+    #[bench]
+    fn bench_merkle_compress_auth_subtree_middle(b: &mut Bencher) {
+        bench_merkle_compress_auth_middle(b, config::MERKLE_H);
+    }
+
+    // PORS tree
+    #[bench]
+    fn bench_merkle_compress_all_pors(b: &mut Bencher) {
+        bench_merkle_compress_all(b, config::PORS_TAU);
+    }
+
+    #[bench]
+    fn bench_merkle_gen_auth_pors_first(b: &mut Bencher) {
+        bench_merkle_gen_auth_first(b, config::PORS_TAU);
+    }
+
+    #[bench]
+    fn bench_merkle_gen_auth_pors_last(b: &mut Bencher) {
+        bench_merkle_gen_auth_last(b, config::PORS_TAU);
+    }
+
+    #[bench]
+    fn bench_merkle_gen_auth_pors_middle(b: &mut Bencher) {
+        bench_merkle_gen_auth_middle(b, config::PORS_TAU);
+    }
+
+    #[bench]
+    fn bench_merkle_compress_auth_pors_first(b: &mut Bencher) {
+        bench_merkle_compress_auth_first(b, config::PORS_TAU);
+    }
+
+    #[bench]
+    fn bench_merkle_compress_auth_pors_last(b: &mut Bencher) {
+        bench_merkle_compress_auth_last(b, config::PORS_TAU);
+    }
+
+    #[bench]
+    fn bench_merkle_compress_auth_pors_middle(b: &mut Bencher) {
+        bench_merkle_compress_auth_middle(b, config::PORS_TAU);
+    }
 }
