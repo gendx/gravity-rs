@@ -27,17 +27,16 @@ pub(crate) fn aesenclast(block: &mut u64x2, rkey: &u64x2) {
 
 macro_rules! aeskeygenassist {
     ($src:ident, $i:expr) => {{
-        let mut dst: u64x2;
+        let mut dst = mem::MaybeUninit::<u64x2>::uninit();
         unsafe {
-            dst = mem::uninitialized();
             asm!("aeskeygenassist $0, $1, $2"
-                    : "+x"(dst)
+                    : "+x"(*dst.as_mut_ptr())
                     : "x"(*$src), "i"($i)
                     :
                     : "intel", "alignstack"
                 );
+            dst.assume_init()
         }
-        dst
     }}
 }
 
@@ -106,17 +105,16 @@ pub(crate) fn pslldq_0x04(dst: &mut u64x2) {
 
 macro_rules! pshufd {
     ($src:ident, $i:expr) => {{
-        let mut dst: u64x2;
+        let mut dst = mem::MaybeUninit::<u64x2>::uninit();
         unsafe {
-            dst = mem::uninitialized();
             asm!("pshufd $0, $1, $2"
-                    : "+x"(dst)
+                    : "+x"(*dst.as_mut_ptr())
                     : "x"(*$src), "i"($i)
                     :
                     : "intel", "alignstack"
                 );
+            dst.assume_init()
         }
-        dst
     }}
 }
 

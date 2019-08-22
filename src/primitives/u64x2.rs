@@ -10,10 +10,10 @@ impl u64x2 {
     /// Reads u64x2 from array pointer (potentially unaligned)
     #[inline(always)]
     pub fn read(src: &[u8; 16]) -> Self {
+        let mut tmp = mem::MaybeUninit::<Self>::uninit();
         unsafe {
-            let mut tmp: Self = mem::uninitialized();
-            copy_nonoverlapping(src.as_ptr(), &mut tmp as *mut Self as *mut u8, 16);
-            tmp
+            copy_nonoverlapping(src.as_ptr(), tmp.as_mut_ptr() as *mut Self as *mut u8, 16);
+            tmp.assume_init()
         }
     }
 
