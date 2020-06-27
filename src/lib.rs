@@ -1,4 +1,4 @@
-#![feature(asm)]
+#![feature(llvm_asm)]
 #![feature(const_generics)]
 #![feature(repr_simd)]
 #![feature(test)]

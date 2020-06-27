@@ -4,7 +4,7 @@ use std::mem;
 #[inline(always)]
 pub(crate) fn aesenc(block: &mut u64x2, rkey: &u64x2) {
     unsafe {
-        asm!("aesenc $0, $1"
+        llvm_asm!("aesenc $0, $1"
             : "+x"(*block)
             : "x"(*rkey)
             :
@@ -16,7 +16,7 @@ pub(crate) fn aesenc(block: &mut u64x2, rkey: &u64x2) {
 #[inline(always)]
 pub(crate) fn aesenclast(block: &mut u64x2, rkey: &u64x2) {
     unsafe {
-        asm!("aesenclast $0, $1"
+        llvm_asm!("aesenclast $0, $1"
             : "+x"(*block)
             : "x"(*rkey)
             :
@@ -29,7 +29,7 @@ macro_rules! aeskeygenassist {
     ($src:ident, $i:expr) => {{
         let mut dst = mem::MaybeUninit::<u64x2>::uninit();
         unsafe {
-            asm!("aeskeygenassist $0, $1, $2"
+            llvm_asm!("aeskeygenassist $0, $1, $2"
                     : "+x"(*dst.as_mut_ptr())
                     : "x"(*$src), "i"($i)
                     :
@@ -76,7 +76,7 @@ pub(crate) fn aeskeygenassist_0x40(src: &u64x2) -> u64x2 {
 #[inline(always)]
 pub(crate) fn pxor(dst: &mut u64x2, src: &u64x2) {
     unsafe {
-        asm!("pxor $0, $1"
+        llvm_asm!("pxor $0, $1"
             : "+x"(*dst)
             : "x"(*src)
             :
@@ -88,7 +88,7 @@ pub(crate) fn pxor(dst: &mut u64x2, src: &u64x2) {
 macro_rules! pslldq {
     ($dst:ident, $i:expr) => {{
         unsafe {
-            asm!("pslldq $0, $1"
+            llvm_asm!("pslldq $0, $1"
                     : "+x"(*$dst)
                     : "i"($i)
                     :
@@ -107,7 +107,7 @@ macro_rules! pshufd {
     ($src:ident, $i:expr) => {{
         let mut dst = mem::MaybeUninit::<u64x2>::uninit();
         unsafe {
-            asm!("pshufd $0, $1, $2"
+            llvm_asm!("pshufd $0, $1, $2"
                     : "+x"(*dst.as_mut_ptr())
                     : "x"(*$src), "i"($i)
                     :
@@ -130,7 +130,7 @@ pub(crate) fn pshufd_0xaa(src: &u64x2) -> u64x2 {
 #[inline(always)]
 pub(crate) fn unpacklo_epi32(dst: &mut u64x2, src: &u64x2) {
     unsafe {
-        asm!("punpckldq $0, $1"
+        llvm_asm!("punpckldq $0, $1"
             : "+x"(*dst)
             : "x"(*src)
             :
@@ -142,7 +142,7 @@ pub(crate) fn unpacklo_epi32(dst: &mut u64x2, src: &u64x2) {
 #[inline(always)]
 pub(crate) fn unpackhi_epi32(dst: &mut u64x2, src: &u64x2) {
     unsafe {
-        asm!("punpckhdq $0, $1"
+        llvm_asm!("punpckhdq $0, $1"
             : "+x"(*dst)
             : "x"(*src)
             :
