@@ -1,0 +1,12 @@
+on: [push, pull_request]
+name: Build
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-C target-cpu=native -D warnings"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Build
+        run: cargo build --verbose

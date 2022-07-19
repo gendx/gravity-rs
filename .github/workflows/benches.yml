@@ -1,0 +1,21 @@
+on: [push, pull_request]
+name: Benchmarks
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-C target-cpu=native -D warnings"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Run benchmarks
+        run: cargo bench --verbose
+  build_benchmarks:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-C target-cpu=native -D warnings"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Build heavy benchmarks
+        run: cargo build --benches --features bigbench --verbose

@@ -1,0 +1,14 @@
+on: [push, pull_request]
+name: Lints
+jobs:
+  clippy:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-D warnings"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy
+      - name: Check Clippy lints
+        run: cargo clippy --verbose

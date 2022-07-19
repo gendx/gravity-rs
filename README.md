@@ -1,4 +1,7 @@
-# gravity-rs [![Build Status](https://travis-ci.org/gendx/gravity-rs.svg?branch=master)](https://travis-ci.org/gendx/gravity-rs)
+# gravity-rs
+
+![Build Status](https://github.com/gendx/gravity-rs/workflows/Build/badge.svg)
+![Test Status](https://github.com/gendx/gravity-rs/workflows/Tests/badge.svg)
 
 A Rust implementation of the [Gravity-post-quantum](https://github.com/gravity-postquantum) signature schemes.
 
