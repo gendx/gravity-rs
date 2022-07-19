@@ -1,3 +1,4 @@
+use arrayref::array_mut_ref;
 use byteorder::{BigEndian, ByteOrder};
 use std::fmt;
 

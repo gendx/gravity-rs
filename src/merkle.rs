@@ -1,5 +1,5 @@
-use hash;
-use hash::Hash;
+use crate::hash;
+use crate::hash::Hash;
 use std::mem;
 
 pub struct MerkleBuf {

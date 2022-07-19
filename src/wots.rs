@@ -1,9 +1,9 @@
-use address;
-use config::*;
-use hash;
-use hash::Hash;
-use ltree::ltree_leaves_ret;
-use prng;
+use crate::address;
+use crate::config::*;
+use crate::hash;
+use crate::hash::Hash;
+use crate::ltree::ltree_leaves_ret;
+use crate::prng;
 use std::default;
 
 pub struct SecKey([Hash; WOTS_ELL]);

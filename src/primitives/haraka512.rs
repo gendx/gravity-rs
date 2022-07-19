@@ -1,7 +1,8 @@
+use super::constants;
+use super::intrinsics;
+use super::u64x2::u64x2;
+use arrayref::{array_mut_ref, array_ref};
 use byteorder::{ByteOrder, LittleEndian};
-use primitives::constants;
-use primitives::intrinsics;
-use primitives::u64x2::u64x2;
 
 #[inline(always)]
 fn aes4(s0: &mut u64x2, s1: &mut u64x2, s2: &mut u64x2, s3: &mut u64x2, rci: usize) {

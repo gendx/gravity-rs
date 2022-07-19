@@ -1,6 +1,7 @@
-use address;
-use hash::Hash;
-use primitives::aes256;
+use crate::address;
+use crate::hash::Hash;
+use crate::primitives::aes256;
+use arrayref::array_mut_ref;
 
 #[derive(Default)]
 pub struct Prng {
@@ -40,6 +41,7 @@ impl Prng {
 mod tests {
     use super::super::hash;
     use super::*;
+    use arrayref::array_ref;
 
     #[test]
     fn test_genblock_zero() {

@@ -1,14 +1,15 @@
-use primitives::u64x2::u64x2;
+use super::u64x2::u64x2;
+use std::arch::asm;
 use std::mem;
 
 #[inline(always)]
 pub(crate) fn aesenc(block: &mut u64x2, rkey: &u64x2) {
     unsafe {
-        llvm_asm!("aesenc $0, $1"
-            : "+x"(*block)
-            : "x"(*rkey)
-            :
-            : "intel", "alignstack"
+        asm!(
+            "aesenc {0}, {1}",
+            inout(xmm_reg) *block,
+            in(xmm_reg) *rkey,
+            options(pure, nomem, nostack)
         );
     }
 }
@@ -16,125 +17,178 @@ pub(crate) fn aesenc(block: &mut u64x2, rkey: &u64x2) {
 #[inline(always)]
 pub(crate) fn aesenclast(block: &mut u64x2, rkey: &u64x2) {
     unsafe {
-        llvm_asm!("aesenclast $0, $1"
-            : "+x"(*block)
-            : "x"(*rkey)
-            :
-            : "intel", "alignstack"
+        asm!(
+            "aesenclast {0}, {1}",
+            inout(xmm_reg) *block,
+            in(xmm_reg) *rkey,
+            options(pure, nomem, nostack)
         );
     }
 }
 
-macro_rules! aeskeygenassist {
-    ($src:ident, $i:expr) => {{
-        let mut dst = mem::MaybeUninit::<u64x2>::uninit();
-        unsafe {
-            llvm_asm!("aeskeygenassist $0, $1, $2"
-                    : "+x"(*dst.as_mut_ptr())
-                    : "x"(*$src), "i"($i)
-                    :
-                    : "intel", "alignstack"
-                );
-            dst.assume_init()
-        }
-    }}
-}
-
 #[inline(always)]
 pub(crate) fn aeskeygenassist_0x00(src: &u64x2) -> u64x2 {
-    aeskeygenassist!(src, 0x00)
+    let mut dst = mem::MaybeUninit::<u64x2>::uninit();
+    unsafe {
+        asm!(
+            "aeskeygenassist {0}, {1}, 0x00",
+            inout(xmm_reg) *dst.as_mut_ptr(),
+            in(xmm_reg) *src,
+            options(pure, nomem, nostack)
+        );
+        dst.assume_init()
+    }
 }
 #[inline(always)]
 pub(crate) fn aeskeygenassist_0x01(src: &u64x2) -> u64x2 {
-    aeskeygenassist!(src, 0x01)
+    let mut dst = mem::MaybeUninit::<u64x2>::uninit();
+    unsafe {
+        asm!(
+            "aeskeygenassist {0}, {1}, 0x01",
+            inout(xmm_reg) *dst.as_mut_ptr(),
+            in(xmm_reg) *src,
+            options(pure, nomem, nostack)
+        );
+        dst.assume_init()
+    }
 }
 #[inline(always)]
 pub(crate) fn aeskeygenassist_0x02(src: &u64x2) -> u64x2 {
-    aeskeygenassist!(src, 0x02)
+    let mut dst = mem::MaybeUninit::<u64x2>::uninit();
+    unsafe {
+        asm!(
+            "aeskeygenassist {0}, {1}, 0x02",
+            inout(xmm_reg) *dst.as_mut_ptr(),
+            in(xmm_reg) *src,
+            options(pure, nomem, nostack)
+        );
+        dst.assume_init()
+    }
 }
 #[inline(always)]
 pub(crate) fn aeskeygenassist_0x04(src: &u64x2) -> u64x2 {
-    aeskeygenassist!(src, 0x04)
+    let mut dst = mem::MaybeUninit::<u64x2>::uninit();
+    unsafe {
+        asm!(
+            "aeskeygenassist {0}, {1}, 0x04",
+            inout(xmm_reg) *dst.as_mut_ptr(),
+            in(xmm_reg) *src,
+            options(pure, nomem, nostack)
+        );
+        dst.assume_init()
+    }
 }
 #[inline(always)]
 pub(crate) fn aeskeygenassist_0x08(src: &u64x2) -> u64x2 {
-    aeskeygenassist!(src, 0x08)
+    let mut dst = mem::MaybeUninit::<u64x2>::uninit();
+    unsafe {
+        asm!(
+            "aeskeygenassist {0}, {1}, 0x08",
+            inout(xmm_reg) *dst.as_mut_ptr(),
+            in(xmm_reg) *src,
+            options(pure, nomem, nostack)
+        );
+        dst.assume_init()
+    }
 }
 #[inline(always)]
 pub(crate) fn aeskeygenassist_0x10(src: &u64x2) -> u64x2 {
-    aeskeygenassist!(src, 0x10)
+    let mut dst = mem::MaybeUninit::<u64x2>::uninit();
+    unsafe {
+        asm!(
+            "aeskeygenassist {0}, {1}, 0x10",
+            inout(xmm_reg) *dst.as_mut_ptr(),
+            in(xmm_reg) *src,
+            options(pure, nomem, nostack)
+        );
+        dst.assume_init()
+    }
 }
 #[inline(always)]
 pub(crate) fn aeskeygenassist_0x20(src: &u64x2) -> u64x2 {
-    aeskeygenassist!(src, 0x20)
+    let mut dst = mem::MaybeUninit::<u64x2>::uninit();
+    unsafe {
+        asm!(
+            "aeskeygenassist {0}, {1}, 0x20",
+            inout(xmm_reg) *dst.as_mut_ptr(),
+            in(xmm_reg) *src,
+            options(pure, nomem, nostack)
+        );
+        dst.assume_init()
+    }
 }
 #[inline(always)]
 pub(crate) fn aeskeygenassist_0x40(src: &u64x2) -> u64x2 {
-    aeskeygenassist!(src, 0x40)
+    let mut dst = mem::MaybeUninit::<u64x2>::uninit();
+    unsafe {
+        asm!(
+            "aeskeygenassist {0}, {1}, 0x40",
+            inout(xmm_reg) *dst.as_mut_ptr(),
+            in(xmm_reg) *src,
+            options(pure, nomem, nostack)
+        );
+        dst.assume_init()
+    }
 }
 
 #[inline(always)]
 pub(crate) fn pxor(dst: &mut u64x2, src: &u64x2) {
     unsafe {
-        llvm_asm!("pxor $0, $1"
-            : "+x"(*dst)
-            : "x"(*src)
-            :
-            : "intel", "alignstack"
+        asm!(
+            "pxor {0}, {1}",
+            inout(xmm_reg) *dst,
+            in(xmm_reg) *src,
+            options(pure, nomem, nostack)
         );
     }
 }
 
-macro_rules! pslldq {
-    ($dst:ident, $i:expr) => {{
-        unsafe {
-            llvm_asm!("pslldq $0, $1"
-                    : "+x"(*$dst)
-                    : "i"($i)
-                    :
-                    : "intel", "alignstack"
-                );
-        }
-    }}
-}
-
 #[inline(always)]
 pub(crate) fn pslldq_0x04(dst: &mut u64x2) {
-    pslldq!(dst, 0x04)
-}
-
-macro_rules! pshufd {
-    ($src:ident, $i:expr) => {{
-        let mut dst = mem::MaybeUninit::<u64x2>::uninit();
-        unsafe {
-            llvm_asm!("pshufd $0, $1, $2"
-                    : "+x"(*dst.as_mut_ptr())
-                    : "x"(*$src), "i"($i)
-                    :
-                    : "intel", "alignstack"
-                );
-            dst.assume_init()
-        }
-    }}
+    unsafe {
+        asm!(
+            "pslldq {0}, 0x04",
+            inout(xmm_reg) * dst,
+            options(pure, nomem, nostack)
+        );
+    }
 }
 
 #[inline(always)]
 pub(crate) fn pshufd_0xff(src: &u64x2) -> u64x2 {
-    pshufd!(src, 0xff)
+    let mut dst = mem::MaybeUninit::<u64x2>::uninit();
+    unsafe {
+        asm!(
+            "pshufd {0}, {1}, 0xff",
+            inout(xmm_reg) *dst.as_mut_ptr(),
+            in(xmm_reg) *src,
+            options(pure, nomem, nostack)
+        );
+        dst.assume_init()
+    }
 }
 #[inline(always)]
 pub(crate) fn pshufd_0xaa(src: &u64x2) -> u64x2 {
-    pshufd!(src, 0xaa)
+    let mut dst = mem::MaybeUninit::<u64x2>::uninit();
+    unsafe {
+        asm!(
+            "pshufd {0}, {1}, 0xaa",
+            inout(xmm_reg) *dst.as_mut_ptr(),
+            in(xmm_reg) *src,
+            options(pure, nomem, nostack)
+        );
+        dst.assume_init()
+    }
 }
 
 #[inline(always)]
 pub(crate) fn unpacklo_epi32(dst: &mut u64x2, src: &u64x2) {
     unsafe {
-        llvm_asm!("punpckldq $0, $1"
-            : "+x"(*dst)
-            : "x"(*src)
-            :
-            : "intel", "alignstack"
+        asm!(
+            "punpckldq {0}, {1}",
+            inout(xmm_reg) *dst,
+            in(xmm_reg) *src,
+            options(pure, nomem, nostack)
         );
     }
 }
@@ -142,11 +196,11 @@ pub(crate) fn unpacklo_epi32(dst: &mut u64x2, src: &u64x2) {
 #[inline(always)]
 pub(crate) fn unpackhi_epi32(dst: &mut u64x2, src: &u64x2) {
     unsafe {
-        llvm_asm!("punpckhdq $0, $1"
-            : "+x"(*dst)
-            : "x"(*src)
-            :
-            : "intel", "alignstack"
+        asm!(
+            "punpckhdq {0}, {1}",
+            inout(xmm_reg) *dst,
+            in(xmm_reg) *src,
+            options(pure, nomem, nostack)
         );
     }
 }
@@ -154,6 +208,7 @@ pub(crate) fn unpackhi_epi32(dst: &mut u64x2, src: &u64x2) {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::primitives::constants;
 
     pub fn aesenc_slice(block: &mut [u8; 16], rkey: &[u8; 16]) {
         let mut block_xmm = u64x2::read(block);
@@ -164,8 +219,6 @@ pub mod tests {
 
     #[test]
     fn test_aesenc() {
-        use primitives::constants;
-
         let mut dst = [0u8; 16];
         let rkey = [0u8; 16];
         let expect = [constants::AES_SBOX[0]; 16];
@@ -182,8 +235,6 @@ pub mod tests {
 
     #[test]
     fn test_aesenclast() {
-        use primitives::constants;
-
         let mut dst = [0u8; 16];
         let rkey = [0u8; 16];
         let expect = [constants::AES_SBOX[0]; 16];

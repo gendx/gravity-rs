@@ -1,9 +1,9 @@
-use address;
-use config::*;
-use hash::Hash;
-use merkle;
-use prng;
-use wots;
+use crate::address;
+use crate::config::*;
+use crate::hash::Hash;
+use crate::merkle;
+use crate::prng;
+use crate::wots;
 
 pub struct SecKey<'a> {
     prng: &'a prng::Prng,

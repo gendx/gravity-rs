@@ -1,6 +1,7 @@
-use primitives::constants;
-use primitives::intrinsics;
-use primitives::u64x2::u64x2;
+use super::constants;
+use super::intrinsics;
+use super::u64x2::u64x2;
+use arrayref::{array_mut_ref, array_ref};
 
 #[inline(always)]
 fn aes2(s0: &mut u64x2, s1: &mut u64x2, rci: usize) {

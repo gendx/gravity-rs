@@ -1,5 +1,5 @@
-use hash;
-use hash::Hash;
+use crate::hash;
+use crate::hash::Hash;
 use std::mem;
 
 fn ltree(root: &mut Hash, buf: &mut [Hash], mut count: usize) {

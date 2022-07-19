@@ -1,13 +1,6 @@
-#![feature(llvm_asm)]
-#![feature(const_generics)]
 #![feature(repr_simd)]
-#![feature(test)]
+#![cfg_attr(test, feature(test))]
 
-#[macro_use]
-extern crate arrayref;
-extern crate byteorder;
-extern crate hex;
-extern crate sha2;
 #[cfg(test)]
 extern crate test;
 

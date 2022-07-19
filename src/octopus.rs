@@ -1,8 +1,9 @@
+use crate::config::*;
+use crate::hash;
+use crate::hash::Hash;
+use crate::merkle;
+use arrayref::array_mut_ref;
 use byteorder::{ByteOrder, LittleEndian};
-use config::*;
-use hash;
-use hash::Hash;
-use merkle;
 use std::mem;
 
 #[derive(Default, Debug, PartialEq)]
@@ -158,6 +159,7 @@ pub fn merkle_compress_octopus(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use arrayref::array_ref;
 
     fn merkle_gen_octopus_leaves(
         octopus: &mut Octopus,

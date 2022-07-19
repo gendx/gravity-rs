@@ -1,11 +1,12 @@
-use address;
+use crate::address;
+use crate::config::*;
+use crate::hash;
+use crate::hash::Hash;
+use crate::merkle;
+use crate::octopus;
+use crate::prng;
+use arrayref::array_ref;
 use byteorder::{BigEndian, ByteOrder};
-use config::*;
-use hash;
-use hash::Hash;
-use merkle;
-use octopus;
-use prng;
 
 pub struct SecKey {
     values: Vec<Hash>,

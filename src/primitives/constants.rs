@@ -1,4 +1,4 @@
-use primitives::u64x2::u64x2;
+use super::u64x2::u64x2;
 
 pub(crate) static HARAKA_CONSTANTS: [u64x2; 48] = [
     u64x2(0xb2c5fef075817b9d, 0x0684704ce620c00a),

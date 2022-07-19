@@ -1,5 +1,6 @@
-use primitives::intrinsics;
-use primitives::u64x2::u64x2;
+use super::intrinsics;
+use super::u64x2::u64x2;
+use arrayref::array_ref;
 
 #[inline(always)]
 fn assist256_1(a: &mut u64x2, mut b: u64x2) {
@@ -119,6 +120,9 @@ pub fn aes256_ret(src: &[u8; 16], key: &[u8; 32]) -> [u8; 16] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::primitives::constants;
+    use crate::primitives::intrinsics;
+    use arrayref::array_mut_ref;
 
     #[test]
     fn test_aes256() {
@@ -149,8 +153,6 @@ mod tests {
     }
 
     fn subbytes(state: &mut [u8; 16]) {
-        use primitives::constants;
-
         for x in state.iter_mut() {
             *x = constants::AES_SBOX[*x as usize];
         }
@@ -251,8 +253,6 @@ mod tests {
 
     #[test]
     fn test_aesenc_nokey() {
-        use primitives::intrinsics;
-
         let mut state = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         let rkey = [0u8; 16];
         intrinsics::tests::aesenc_slice(&mut state, &rkey);
@@ -267,8 +267,6 @@ mod tests {
 
     #[test]
     fn test_aesenclast_nokey() {
-        use primitives::intrinsics;
-
         let mut state = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         let rkey = [0u8; 16];
         intrinsics::tests::aesenclast_slice(&mut state, &rkey);
@@ -288,8 +286,6 @@ mod tests {
 
     #[test]
     fn test_aesenc() {
-        use primitives::intrinsics;
-
         let mut state = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         let rkey = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         intrinsics::tests::aesenc_slice(&mut state, &rkey);
@@ -305,8 +301,6 @@ mod tests {
 
     #[test]
     fn test_aesenclast() {
-        use primitives::intrinsics;
-
         let mut state = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         let rkey = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         intrinsics::tests::aesenclast_slice(&mut state, &rkey);
@@ -328,8 +322,6 @@ mod tests {
     }
 
     fn subword(word: &mut [u8; 4]) {
-        use primitives::constants;
-
         for x in word.iter_mut() {
             *x = constants::AES_SBOX[*x as usize];
         }
@@ -342,8 +334,6 @@ mod tests {
     }
 
     fn expand256_bis(key: &[u8; 32], rkeys: &mut [[u8; 16]; 15]) {
-        use primitives::constants;
-
         rkeys[0] = *array_ref![key, 0, 16];
         rkeys[1] = *array_ref![key, 16, 16];
 

@@ -1,11 +1,12 @@
-use address;
-use config::*;
-use hash;
-use hash::Hash;
-use merkle;
-use pors;
-use prng;
-use subtree;
+use crate::address;
+use crate::config::*;
+use crate::hash;
+use crate::hash::Hash;
+use crate::merkle;
+use crate::pors;
+use crate::prng;
+use crate::subtree;
+use arrayref::array_ref;
 
 pub struct SecKey {
     seed: Hash,
