@@ -238,15 +238,20 @@ mod tests {
 
     use super::super::{address, prng};
     use byteorder::{BigEndian, ByteOrder};
+    use std::hint::black_box;
     use test::Bencher;
 
     #[bench]
     fn bench_merkle_gen_octopus_8(b: &mut Bencher) {
         const HEIGHT: usize = 3;
         let src = [hash::tests::HASH_ELEMENT; 1 << HEIGHT];
-        let mut octopus = Default::default();
         let mut indices = [0, 2, 3, 6];
-        b.iter(|| merkle_gen_octopus_leaves(&mut octopus, &src, HEIGHT, &mut indices));
+        b.iter(|| {
+            let mut octopus = Default::default();
+            let hash =
+                merkle_gen_octopus_leaves(&mut octopus, black_box(&src), HEIGHT, &mut indices);
+            (hash, octopus)
+        });
     }
 
     #[bench]
@@ -256,8 +261,11 @@ mod tests {
         hash::hash_parallel(buf.slice_leaves_mut(), &src, PORS_T);
 
         let mut subset = fake_pors_subset();
-        let mut octopus = Default::default();
-        b.iter(|| merkle_gen_octopus(&mut octopus, &mut buf, &mut subset));
+        b.iter(|| {
+            let mut octopus = Default::default();
+            let hash = merkle_gen_octopus(&mut octopus, black_box(&mut buf), &mut subset);
+            (hash, octopus)
+        });
     }
 
     #[bench]
@@ -269,8 +277,15 @@ mod tests {
         let mut octopus = Default::default();
         let _ = merkle_gen_octopus_leaves(&mut octopus, &src, HEIGHT, &mut indices.clone());
 
-        let mut nodes: Vec<_> = indices.iter().map(|&i| src[i]).collect();
-        b.iter(|| merkle_compress_octopus(&mut nodes, &octopus, HEIGHT, &mut indices));
+        let mut nodes = indices.map(|i| src[i]);
+        b.iter(|| {
+            merkle_compress_octopus(
+                black_box(&mut nodes),
+                black_box(&octopus),
+                HEIGHT,
+                &mut indices,
+            )
+        })
     }
 
     #[bench]
@@ -283,8 +298,15 @@ mod tests {
         let mut octopus = Default::default();
         merkle_gen_octopus(&mut octopus, &mut buf, &mut subset.clone());
 
-        let mut nodes: Vec<_> = subset.iter().map(|&i| src[i]).collect();
-        b.iter(|| merkle_compress_octopus(&mut nodes, &octopus, PORS_TAU, &mut subset));
+        let mut nodes = subset.map(|i| src[i]);
+        b.iter(|| {
+            merkle_compress_octopus(
+                black_box(&mut nodes),
+                black_box(&octopus),
+                PORS_TAU,
+                &mut subset,
+            )
+        });
     }
 
     fn fake_pors_subset() -> [usize; PORS_K] {

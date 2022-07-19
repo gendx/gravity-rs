@@ -117,6 +117,7 @@ mod tests {
         assert!(pk.verify(&address, &sign, &msg));
     }
 
+    use std::hint::black_box;
     use test::Bencher;
 
     #[bench]
@@ -129,7 +130,7 @@ mod tests {
         let address = address::Address::new(layer, instance);
 
         let sk = SecKey::new(&prng);
-        b.iter(|| sk.genpk(&address));
+        b.iter(|| sk.genpk(black_box(&address)));
     }
 
     #[bench]
@@ -143,7 +144,7 @@ mod tests {
 
         let sk = SecKey::new(&prng);
         let msg = hash::tests::HASH_ELEMENT;
-        b.iter(|| sk.sign(&address, &msg));
+        b.iter(|| sk.sign(black_box(&address), black_box(&msg)));
     }
 
     #[bench]
@@ -159,7 +160,7 @@ mod tests {
         let pk = sk.genpk(&address);
         let msg = hash::tests::HASH_ELEMENT;
         let (_, sign) = sk.sign(&address, &msg);
-        b.iter(|| pk.verify(&address, &sign, &msg));
+        b.iter(|| pk.verify(black_box(&address), black_box(&sign), black_box(&msg)));
     }
 
     // TODO: test vectors

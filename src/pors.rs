@@ -178,6 +178,7 @@ mod tests {
         assert!(pk.verify(&sign, &msg));
     }
 
+    use std::hint::black_box;
     use test::Bencher;
 
     #[bench]
@@ -186,7 +187,7 @@ mod tests {
         let msg = hash::tests::HASH_ELEMENT;
 
         let pepper = hash::hash_2n_to_n_ret(&salt, &msg);
-        b.iter(|| obtain_address_subset(&pepper, &msg));
+        b.iter(|| obtain_address_subset(black_box(&pepper), black_box(&msg)));
     }
 
     #[bench]
@@ -197,10 +198,10 @@ mod tests {
 
         let prng = prng::Prng::new(&seed);
         b.iter(|| {
-            let pepper = hash::hash_2n_to_n_ret(&salt, &msg);
+            let pepper = hash::hash_2n_to_n_ret(black_box(&salt), black_box(&msg));
             let (address, _) = obtain_address_subset(&pepper, &msg);
 
-            let sk = SecKey::new(&prng, &address);
+            let sk = SecKey::new(black_box(&prng), &address);
             sk.genpk()
         });
     }
@@ -213,10 +214,10 @@ mod tests {
 
         let prng = prng::Prng::new(&seed);
         b.iter(|| {
-            let pepper = hash::hash_2n_to_n_ret(&salt, &msg);
+            let pepper = hash::hash_2n_to_n_ret(black_box(&salt), black_box(&msg));
             let (address, _) = obtain_address_subset(&pepper, &msg);
 
-            SecKey::new(&prng, &address)
+            SecKey::new(black_box(&prng), &address)
         });
     }
 
@@ -245,7 +246,7 @@ mod tests {
         let (address, subset) = obtain_address_subset(&pepper, &msg);
 
         let sk = SecKey::new(&prng, &address);
-        b.iter(|| sk.sign_subset(pepper, subset));
+        b.iter(|| sk.sign_subset(black_box(pepper), black_box(subset)));
     }
 
     #[bench]
@@ -261,7 +262,7 @@ mod tests {
         let sk = SecKey::new(&prng, &address);
         let pk = sk.genpk();
         let (_, sign) = sk.sign_subset(pepper, subset);
-        b.iter(|| pk.verify(&sign, &msg));
+        b.iter(|| pk.verify(black_box(&sign), black_box(&msg)));
     }
 
     // TODO: test vectors

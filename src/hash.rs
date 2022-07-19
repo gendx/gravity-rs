@@ -236,55 +236,63 @@ pub mod tests {
         assert_eq!(dst, [expect, expect]);
     }
 
+    use std::hint::black_box;
     use test::Bencher;
 
     #[bench]
     fn bench_chain_1(b: &mut Bencher) {
         let src = HASH_ELEMENT;
-        b.iter(|| hash_n_to_n_chain_ret(&src, 1));
+        b.iter(|| hash_n_to_n_chain_ret(black_box(&src), 1));
     }
 
     #[bench]
     fn bench_chain_5(b: &mut Bencher) {
         let src = HASH_ELEMENT;
-        b.iter(|| hash_n_to_n_chain_ret(&src, 5));
+        b.iter(|| hash_n_to_n_chain_ret(black_box(&src), 5));
     }
 
     #[bench]
     fn bench_parallel_5(b: &mut Bencher) {
         let src = [HASH_ELEMENT; 5];
-        let mut dst = [Default::default(); 5];
-        b.iter(|| hash_parallel_all(&mut dst, &src));
+        b.iter(|| {
+            let mut dst = [Default::default(); 5];
+            hash_parallel_all(&mut dst, black_box(&src));
+            dst
+        });
     }
 
     #[bench]
     fn bench_parallel_chains_5x5(b: &mut Bencher) {
         let src = [HASH_ELEMENT; 5];
-        let mut dst = [Default::default(); 5];
-        b.iter(|| hash_parallel_chains_all(&mut dst, &src, 5));
+        b.iter(|| {
+            let mut dst = [Default::default(); 5];
+            hash_parallel_chains_all(&mut dst, black_box(&src), 5);
+            dst
+        });
     }
 
     #[bench]
     fn bench_parallel_columns_5x5(b: &mut Bencher) {
         let src = [HASH_ELEMENT; 5];
-        let mut dst = [Default::default(); 5];
         b.iter(|| {
+            let mut dst = [Default::default(); 5];
             for i in 0..5 {
-                hash_n_to_n_chain(&mut dst[i], &src[i], 5);
+                hash_n_to_n_chain(&mut dst[i], black_box(&src[i]), 5);
             }
+            dst
         });
     }
 
     #[bench]
     fn bench_parallel_rows_5x5(b: &mut Bencher) {
         let src = [HASH_ELEMENT; 5];
-        let mut dst = [Default::default(); 5];
         b.iter(|| {
-            dst = src;
+            let mut dst = black_box(src);
             for _ in 0..5 {
                 let tmp = dst;
                 hash_parallel_all(&mut dst, &tmp);
             }
+            dst
         });
     }
 
@@ -297,7 +305,10 @@ pub mod tests {
         let h4 = hash_n_to_n_ret(&h3);
 
         let src = [h0, h1, h2, h3, h4];
-        let mut dst = [Default::default(); 5];
-        b.iter(|| hash_parallel_all(&mut dst, &src));
+        b.iter(|| {
+            let mut dst = [Default::default(); 5];
+            hash_parallel_all(&mut dst, black_box(&src));
+            dst
+        });
     }
 }

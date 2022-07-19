@@ -364,6 +364,7 @@ mod tests {
         assert_eq!(rkeys, rkeys_bis);
     }
 
+    use std::hint::black_box;
     use test::Bencher;
 
     #[bench]
@@ -372,8 +373,11 @@ mod tests {
                     \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\
                     \x10\x11\x12\x13\x14\x15\x16\x17\
                     \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
-        let mut rkeys = [u64x2(0, 0); 15];
-        b.iter(|| expand256(key, &mut rkeys));
+        b.iter(|| {
+            let mut rkeys = [u64x2(0, 0); 15];
+            expand256(black_box(key), &mut rkeys);
+            rkeys
+        });
     }
 
     #[bench]
@@ -387,8 +391,11 @@ mod tests {
         let mut rkeys = [u64x2(0, 0); 15];
         expand256(key, &mut rkeys);
 
-        let mut dst = [0u8; 16];
-        b.iter(|| aes256_rkeys_xmm(&mut dst, src, &rkeys));
+        b.iter(|| {
+            let mut dst = [0u8; 16];
+            aes256_rkeys_xmm(&mut dst, black_box(src), black_box(&rkeys));
+            dst
+        });
     }
 
     #[bench]
@@ -399,6 +406,6 @@ mod tests {
                     \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\
                     \x10\x11\x12\x13\x14\x15\x16\x17\
                     \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
-        b.iter(|| aes256_ret(src, key));
+        b.iter(|| aes256_ret(black_box(src), black_box(key)));
     }
 }

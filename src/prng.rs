@@ -120,35 +120,50 @@ mod tests {
     #[bench]
     fn bench_genblock(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
-        let mut dst = Default::default();
-        b.iter(|| prng.genblock(&mut dst, &address::Address::new(0, 0), 0));
+        b.iter(|| {
+            let mut dst = Default::default();
+            prng.genblock(&mut dst, &address::Address::new(0, 0), 0);
+            dst
+        });
     }
 
     #[bench]
     fn bench_genblocks_5(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
-        let mut dst = [Default::default(); 5];
-        b.iter(|| prng.genblocks(&mut dst, &address::Address::new(0, 0)));
+        b.iter(|| {
+            let mut dst = [Default::default(); 5];
+            prng.genblocks(&mut dst, &address::Address::new(0, 0));
+            dst
+        });
     }
 
     #[bench]
     fn bench_genblocks_20(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
-        let mut dst = [Default::default(); 20];
-        b.iter(|| prng.genblocks(&mut dst, &address::Address::new(0, 0)));
+        b.iter(|| {
+            let mut dst = [Default::default(); 20];
+            prng.genblocks(&mut dst, &address::Address::new(0, 0));
+            dst
+        });
     }
 
     #[bench]
     fn bench_genblocks_pors(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
-        let mut dst = vec![Default::default(); config::PORS_T];
-        b.iter(|| prng.genblocks(&mut dst, &address::Address::new(0, 0)));
+        b.iter(|| {
+            let mut dst = vec![Default::default(); config::PORS_T];
+            prng.genblocks(&mut dst, &address::Address::new(0, 0));
+            dst
+        });
     }
 
     #[bench]
     fn bench_genblocks_wots(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
-        let mut dst = [Default::default(); config::WOTS_ELL];
-        b.iter(|| prng.genblocks(&mut dst, &address::Address::new(0, 0)));
+        b.iter(|| {
+            let mut dst = [Default::default(); config::WOTS_ELL];
+            prng.genblocks(&mut dst, &address::Address::new(0, 0));
+            dst
+        });
     }
 }

@@ -172,6 +172,7 @@ mod tests {
         assert_eq!(&lengths as &[usize], &expect as &[usize]);
     }
 
+    use std::hint::black_box;
     use test::Bencher;
 
     #[bench]
@@ -182,7 +183,7 @@ mod tests {
 
         let prng = prng::Prng::new(&seed);
         b.iter(|| {
-            let address = address::Address::new(layer, instance);
+            let address = black_box(address::Address::new(layer, instance));
             let sk = SecKey::new(&prng, &address);
             sk.genpk()
         });
@@ -196,7 +197,7 @@ mod tests {
 
         let prng = prng::Prng::new(&seed);
         b.iter(|| {
-            let address = address::Address::new(layer, instance);
+            let address = black_box(address::Address::new(layer, instance));
             SecKey::new(&prng, &address)
         });
     }
@@ -223,7 +224,7 @@ mod tests {
         let address = address::Address::new(layer, instance);
         let sk = SecKey::new(&prng, &address);
         let msg = hash::tests::HASH_ELEMENT;
-        b.iter(|| sk.sign(&msg));
+        b.iter(|| sk.sign(black_box(&msg)));
     }
 
     #[bench]
@@ -238,13 +239,13 @@ mod tests {
         let pk = sk.genpk();
         let msg = hash::tests::HASH_ELEMENT;
         let sign = sk.sign(&msg);
-        b.iter(|| pk.verify(&sign, &msg));
+        b.iter(|| pk.verify(black_box(&sign), black_box(&msg)));
     }
 
     #[bench]
     fn bench_split_msg(b: &mut Bencher) {
         let msg = Hash { h: [0; HASH_SIZE] };
-        b.iter(|| split_msg(&msg));
+        b.iter(|| split_msg(black_box(&msg)));
     }
 
     // TODO: test vectors

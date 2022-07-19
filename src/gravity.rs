@@ -299,6 +299,7 @@ mod tests {
         assert_eq!(sign_bytes, expect);
     }
 
+    use std::hint::black_box;
     use test::Bencher;
 
     #[cfg(feature = "bigbench")]
@@ -306,7 +307,7 @@ mod tests {
     fn bench_keypair(b: &mut Bencher) {
         let seed = [0u8; 64];
         b.iter(|| {
-            let sk = SecKey::new(&seed);
+            let sk = SecKey::new(black_box(&seed));
             sk.genpk()
         });
     }
@@ -316,7 +317,7 @@ mod tests {
         let seed = [0u8; 64];
         let sk = SecKey::new(&seed);
         let msg = hash::tests::HASH_ELEMENT;
-        b.iter(|| sk.sign_hash(&msg));
+        b.iter(|| sk.sign_hash(black_box(&msg)));
     }
 
     #[bench]
@@ -326,6 +327,6 @@ mod tests {
         let pk = sk.genpk();
         let msg = hash::tests::HASH_ELEMENT;
         let sign = sk.sign_hash(&msg);
-        b.iter(|| pk.verify_hash(&sign, &msg));
+        b.iter(|| pk.verify_hash(black_box(&sign), black_box(&msg)));
     }
 }

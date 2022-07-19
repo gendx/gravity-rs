@@ -384,6 +384,7 @@ mod tests {
     }
 
     use super::super::config;
+    use std::hint::black_box;
     use test::Bencher;
 
     fn bench_merkle_compress_all(b: &mut Bencher, height: usize) {
@@ -392,18 +393,21 @@ mod tests {
             *leaf = hash::tests::HASH_ELEMENT;
         }
 
-        let mut root = Default::default();
         b.iter(|| {
-            merkle_compress_all(&mut root, &mut buf);
+            let mut root = Default::default();
+            merkle_compress_all(&mut root, black_box(&mut buf));
             root
         });
     }
 
     fn bench_merkle_gen_auth(b: &mut Bencher, height: usize, index: usize) {
-        // TODO: use const generic height once it's available.
-        let mut auth = vec![Default::default(); height];
         let mut buf = MerkleBuf::new(height);
-        b.iter(|| merkle_gen_auth(&mut auth, &mut buf, index));
+        b.iter(|| {
+            // TODO: use const generic height once it's available.
+            let mut auth = vec![Default::default(); height];
+            let hash = merkle_gen_auth(&mut auth, black_box(&mut buf), index);
+            (hash, auth)
+        });
     }
 
     fn bench_merkle_gen_auth_first(b: &mut Bencher, height: usize) {
@@ -426,9 +430,9 @@ mod tests {
     fn bench_merkle_compress_auth(b: &mut Bencher, height: usize, index: usize) {
         // TODO: use const generic height once it's available.
         let auth = vec![hash::tests::HASH_ELEMENT; height];
-        let mut node = hash::tests::HASH_ELEMENT;
         b.iter(|| {
-            merkle_compress_auth(&mut node, &auth, height, index);
+            let mut node = black_box(hash::tests::HASH_ELEMENT);
+            merkle_compress_auth(&mut node, black_box(&auth), height, index);
             node
         });
     }
