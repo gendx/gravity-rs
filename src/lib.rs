@@ -18,14 +18,14 @@ mod subtree;
 mod wots;
 
 pub fn gravity_genpk(public: &mut [u8; 32], secret: &[u8; 64]) {
-    let sk = gravity::SecKey::new(&secret);
+    let sk = gravity::SecKey::new(secret);
     let pk = sk.genpk();
     *public = pk.h.h;
 }
 
 pub fn gravity_sign(secret: &[u8; 64], msg: &[u8]) -> Vec<u8> {
-    let sk = gravity::SecKey::new(&secret);
-    let sign = sk.sign_bytes(&msg);
+    let sk = gravity::SecKey::new(secret);
+    let sign = sk.sign_bytes(msg);
     let mut sign_bytes = Vec::<u8>::new();
     sign.serialize(&mut sign_bytes);
     sign_bytes

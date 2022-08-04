@@ -86,8 +86,10 @@ impl Signature {
     where
         I: Iterator<Item = &'a u8>,
     {
-        let mut sign: Signature = Default::default();
-        sign.wots_sign = wots::Signature::deserialize(it)?;
+        let mut sign = Signature {
+            wots_sign: wots::Signature::deserialize(it)?,
+            ..Default::default()
+        };
         for x in sign.auth.iter_mut() {
             *x = Hash::deserialize(it)?;
         }

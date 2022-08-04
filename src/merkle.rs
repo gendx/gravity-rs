@@ -67,6 +67,7 @@ impl MerkleTree {
         self.nodes[1]
     }
 
+    #[allow(clippy::needless_range_loop)]
     pub fn gen_auth(&self, auth: &mut [Hash], mut index: usize) {
         let mut n = 1 << self.height;
         for l in 0..self.height {
@@ -106,6 +107,7 @@ pub fn merkle_compress_all_leaves(leaves: &[Hash], height: usize) -> Hash {
     root
 }
 
+#[allow(clippy::needless_range_loop)]
 pub fn merkle_gen_auth(auth: &mut [Hash], buf: &mut MerkleBuf, mut index: usize) -> Hash {
     let height = buf.height();
     let mut n = 1 << height;
@@ -126,6 +128,7 @@ pub fn merkle_gen_auth(auth: &mut [Hash], buf: &mut MerkleBuf, mut index: usize)
     dst[0]
 }
 
+#[allow(clippy::needless_range_loop)]
 pub fn merkle_compress_auth(
     node: &mut Hash,
     auth: &[Hash],

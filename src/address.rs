@@ -2,7 +2,7 @@ use arrayref::array_mut_ref;
 use byteorder::{BigEndian, ByteOrder};
 use std::fmt;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub struct Address {
     instance: u64,
     layer: u32,

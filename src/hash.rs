@@ -5,7 +5,7 @@ use arrayref::array_ref;
 use sha2::{Digest, Sha256};
 use std::fmt;
 
-#[derive(Clone, Copy, Default, PartialEq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub struct Hash {
     pub h: [u8; config::HASH_SIZE],
 }
@@ -95,6 +95,7 @@ pub fn hash_parallel_all(dst: &mut [Hash], src: &[Hash]) {
 }
 
 #[inline(always)]
+#[allow(clippy::needless_range_loop)]
 fn hash_parallel_chains(dst: &mut [Hash], src: &[Hash], count: usize, chainlen: usize) {
     dst[..count].copy_from_slice(&src[..count]);
     for _ in 0..chainlen {

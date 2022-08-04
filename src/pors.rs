@@ -36,6 +36,7 @@ impl SecKey {
         PubKey(merkle::merkle_compress_all_leaves(buf.as_slice(), PORS_TAU))
     }
 
+    #[allow(clippy::needless_range_loop)]
     pub fn sign_subset(&self, pepper: Hash, mut subset: [usize; PORS_K]) -> (Hash, Signature) {
         let mut sign = Signature {
             pepper,
@@ -73,11 +74,7 @@ impl Signature {
         hash::hash_parallel_all(&mut nodes, &self.values);
         let root =
             octopus::merkle_compress_octopus(&mut nodes, &self.octopus, PORS_TAU, &mut subset);
-        if let Some(h) = root {
-            Some((address, h))
-        } else {
-            None
-        }
+        root.map(|h| (address, h))
     }
 
     pub fn serialize(&self, output: &mut Vec<u8>) {
@@ -92,8 +89,10 @@ impl Signature {
     where
         I: Iterator<Item = &'a u8>,
     {
-        let mut sign: Signature = Default::default();
-        sign.pepper = Hash::deserialize(it)?;
+        let mut sign = Signature {
+            pepper: Hash::deserialize(it)?,
+            ..Default::default()
+        };
         for x in sign.values.iter_mut() {
             *x = Hash::deserialize(it)?;
         }
@@ -103,14 +102,16 @@ impl Signature {
 }
 
 pub fn sign(prng: &prng::Prng, salt: &Hash, msg: &Hash) -> (address::Address, Hash, Signature) {
-    let pepper = hash::hash_2n_to_n_ret(&salt, &msg);
-    let (address, subset) = obtain_address_subset(&pepper, &msg);
+    let pepper = hash::hash_2n_to_n_ret(salt, msg);
+    let (address, subset) = obtain_address_subset(&pepper, msg);
 
-    let sk = SecKey::new(&prng, &address);
+    let sk = SecKey::new(prng, &address);
     let (root, sign) = sk.sign_subset(pepper, subset);
     (address, root, sign)
 }
 
+#[allow(clippy::needless_range_loop)]
+#[allow(clippy::assertions_on_constants)]
 fn obtain_address_subset(pepper: &Hash, msg: &Hash) -> (address::Address, [usize; PORS_K]) {
     // TODO: use some kind of static_assert instead
     assert!(PORS_K > 0, "PORS is only implemented for PORS_K > 0");

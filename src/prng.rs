@@ -30,9 +30,8 @@ impl Prng {
     }
 
     pub fn genblocks(&self, dst: &mut [Hash], address: &address::Address) {
-        let count = dst.len();
-        for i in 0..count {
-            self.genblock(&mut dst[i], address, i as u32);
+        for (i, x) in dst.iter_mut().enumerate() {
+            self.genblock(x, address, i as u32);
         }
     }
 }

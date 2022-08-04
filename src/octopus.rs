@@ -6,7 +6,7 @@ use arrayref::array_mut_ref;
 use byteorder::{ByteOrder, LittleEndian};
 use std::mem;
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub struct Octopus {
     pub oct: Vec<Hash>,
 }

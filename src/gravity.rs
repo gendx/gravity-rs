@@ -129,8 +129,10 @@ impl Signature {
     where
         I: Iterator<Item = &'a u8>,
     {
-        let mut sign: Signature = Default::default();
-        sign.pors_sign = pors::Signature::deserialize(it)?;
+        let mut sign = Signature {
+            pors_sign: pors::Signature::deserialize(it)?,
+            ..Default::default()
+        };
         for t in sign.subtrees.iter_mut() {
             *t = subtree::Signature::deserialize(it)?;
         }
