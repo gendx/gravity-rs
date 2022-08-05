@@ -2,11 +2,31 @@ on: [push, pull_request]
 name: Build
 jobs:
   build:
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+        arch:
+          - i686
+          - x86_64
+        include:
+          - arch: i686
+            target: i686-unknown-linux-gnu
+            rust_features: "+sse2,+aes"
+          - arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            rust_features: "+sse2,+aes"
+      fail-fast: false
     runs-on: ubuntu-latest
     env:
-      RUSTFLAGS: "-C target-cpu=native -D warnings"
+      RUSTFLAGS: "-C target-feature=${{ matrix.rust_features }} -D warnings"
     steps:
       - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
       - name: Build
-        run: cargo build --verbose
+        run: cargo build --target ${{ matrix.target }} --verbose

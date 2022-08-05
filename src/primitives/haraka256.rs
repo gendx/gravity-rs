@@ -1,42 +1,41 @@
 use super::constants;
-use super::intrinsics;
-use super::u64x2::u64x2;
+use super::simd128::Simd128;
 use arrayref::{array_mut_ref, array_ref};
 
 #[inline(always)]
-fn aes2(s0: &mut u64x2, s1: &mut u64x2, rci: usize) {
-    intrinsics::aesenc(s0, &constants::HARAKA_CONSTANTS[rci]);
-    intrinsics::aesenc(s1, &constants::HARAKA_CONSTANTS[rci + 1]);
-    intrinsics::aesenc(s0, &constants::HARAKA_CONSTANTS[rci + 2]);
-    intrinsics::aesenc(s1, &constants::HARAKA_CONSTANTS[rci + 3]);
+fn aes2(s0: &mut Simd128, s1: &mut Simd128, rci: usize) {
+    Simd128::aesenc(s0, &constants::HARAKA_CONSTANTS[rci]);
+    Simd128::aesenc(s1, &constants::HARAKA_CONSTANTS[rci + 1]);
+    Simd128::aesenc(s0, &constants::HARAKA_CONSTANTS[rci + 2]);
+    Simd128::aesenc(s1, &constants::HARAKA_CONSTANTS[rci + 3]);
 }
 
 #[inline(always)]
-fn mix2(s0: &mut u64x2, s1: &mut u64x2) {
+fn mix2(s0: &mut Simd128, s1: &mut Simd128) {
     let mut tmp = *s0;
-    intrinsics::unpackhi_epi32(&mut tmp, s1);
-    intrinsics::unpacklo_epi32(s0, s1);
+    Simd128::unpackhi_epi32(&mut tmp, s1);
+    Simd128::unpacklo_epi32(s0, s1);
     *s1 = tmp;
 }
 
 #[inline(always)]
-fn aes_mix2(s0: &mut u64x2, s1: &mut u64x2, rci: usize) {
+fn aes_mix2(s0: &mut Simd128, s1: &mut Simd128, rci: usize) {
     aes2(s0, s1, rci);
     mix2(s0, s1);
 }
 
 pub fn haraka256<const N_ROUNDS: usize>(dst: &mut [u8; 32], src: &[u8; 32]) {
-    let mut s0 = u64x2::read(array_ref![src, 0, 16]);
-    let mut s1 = u64x2::read(array_ref![src, 16, 16]);
+    let mut s0 = Simd128::read(array_ref![src, 0, 16]);
+    let mut s1 = Simd128::read(array_ref![src, 16, 16]);
 
     for i in 0..N_ROUNDS {
         aes_mix2(&mut s0, &mut s1, 4 * i);
     }
 
-    let t0 = u64x2::read(array_ref![src, 0, 16]);
-    let t1 = u64x2::read(array_ref![src, 16, 16]);
-    intrinsics::pxor(&mut s0, &t0);
-    intrinsics::pxor(&mut s1, &t1);
+    let t0 = Simd128::read(array_ref![src, 0, 16]);
+    let t1 = Simd128::read(array_ref![src, 16, 16]);
+    Simd128::pxor(&mut s0, &t0);
+    Simd128::pxor(&mut s1, &t1);
 
     s0.write(array_mut_ref![dst, 0, 16]);
     s1.write(array_mut_ref![dst, 16, 16]);
@@ -47,8 +46,8 @@ mod tests {
     use super::*;
 
     fn mix2_slice(s0: &mut [u8; 16], s1: &mut [u8; 16]) {
-        let mut s0_xmm = u64x2::read(s0);
-        let mut s1_xmm = u64x2::read(s1);
+        let mut s0_xmm = Simd128::read(s0);
+        let mut s1_xmm = Simd128::read(s1);
         mix2(&mut s0_xmm, &mut s1_xmm);
         s0_xmm.write(s0);
         s1_xmm.write(s1);
@@ -68,8 +67,8 @@ mod tests {
     }
 
     fn aes2_slice(state: &mut [u8; 32], rci: usize) {
-        let mut s0_xmm = u64x2::read(array_ref![state, 0, 16]);
-        let mut s1_xmm = u64x2::read(array_ref![state, 16, 16]);
+        let mut s0_xmm = Simd128::read(array_ref![state, 0, 16]);
+        let mut s1_xmm = Simd128::read(array_ref![state, 16, 16]);
         aes2(&mut s0_xmm, &mut s1_xmm, rci);
         s0_xmm.write(array_mut_ref![state, 0, 16]);
         s1_xmm.write(array_mut_ref![state, 16, 16]);
@@ -93,8 +92,8 @@ mod tests {
     }
 
     fn aes_mix2_slice(state: &mut [u8; 32], rci: usize) {
-        let mut s0_xmm = u64x2::read(array_ref![state, 0, 16]);
-        let mut s1_xmm = u64x2::read(array_ref![state, 16, 16]);
+        let mut s0_xmm = Simd128::read(array_ref![state, 0, 16]);
+        let mut s1_xmm = Simd128::read(array_ref![state, 16, 16]);
         aes_mix2(&mut s0_xmm, &mut s1_xmm, rci);
         s0_xmm.write(array_mut_ref![state, 0, 16]);
         s1_xmm.write(array_mut_ref![state, 16, 16]);
@@ -151,17 +150,19 @@ mod tests {
     use std::hint::black_box;
     use test::Bencher;
 
+    fn haraka256_through<const N_ROUNDS: usize>(src: &[u8; 32]) -> [u8; 32] {
+        let mut dst = [0; 32];
+        haraka256::<N_ROUNDS>(&mut dst, src);
+        dst
+    }
+
     #[bench]
     fn bench_haraka256_5round(b: &mut Bencher) {
         let src = b"\x00\x01\x02\x03\x04\x05\x06\x07\
                     \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\
                     \x10\x11\x12\x13\x14\x15\x16\x17\
                     \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
-        b.iter(|| {
-            let mut dst = [0; 32];
-            haraka256::<5>(&mut dst, black_box(&src));
-            dst
-        });
+        b.iter(|| haraka256_through::<5>(black_box(&src)));
     }
 
     #[bench]
@@ -170,10 +171,6 @@ mod tests {
                     \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\
                     \x10\x11\x12\x13\x14\x15\x16\x17\
                     \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
-        b.iter(|| {
-            let mut dst = [0; 32];
-            haraka256::<6>(&mut dst, black_box(&src));
-            dst
-        });
+        b.iter(|| haraka256_through::<6>(black_box(&src)));
     }
 }

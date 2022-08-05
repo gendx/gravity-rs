@@ -1,85 +1,84 @@
-use super::intrinsics;
-use super::u64x2::u64x2;
+use super::simd128::Simd128;
 use arrayref::array_ref;
 
 #[inline(always)]
-fn assist256_1(a: &mut u64x2, mut b: u64x2) {
-    b = intrinsics::pshufd_0xff(&b);
-    let mut y: u64x2 = *a;
-    intrinsics::pslldq_0x04(&mut y);
-    intrinsics::pxor(a, &y);
-    intrinsics::pslldq_0x04(&mut y);
-    intrinsics::pxor(a, &y);
-    intrinsics::pslldq_0x04(&mut y);
-    intrinsics::pxor(a, &y);
-    intrinsics::pxor(a, &b);
+fn assist256_1(a: &mut Simd128, mut b: Simd128) {
+    b = Simd128::pshufd::<0xff>(&b);
+    let mut y: Simd128 = *a;
+    Simd128::pslldq::<0x04>(&mut y);
+    Simd128::pxor(a, &y);
+    Simd128::pslldq::<0x04>(&mut y);
+    Simd128::pxor(a, &y);
+    Simd128::pslldq::<0x04>(&mut y);
+    Simd128::pxor(a, &y);
+    Simd128::pxor(a, &b);
 }
 
 #[inline(always)]
-fn assist256_2(mut a: u64x2, b: &mut u64x2) {
-    a = intrinsics::pshufd_0xaa(&a);
-    let mut y: u64x2 = *b;
-    intrinsics::pslldq_0x04(&mut y);
-    intrinsics::pxor(b, &y);
-    intrinsics::pslldq_0x04(&mut y);
-    intrinsics::pxor(b, &y);
-    intrinsics::pslldq_0x04(&mut y);
-    intrinsics::pxor(b, &y);
-    intrinsics::pxor(b, &a);
+fn assist256_2(mut a: Simd128, b: &mut Simd128) {
+    a = Simd128::pshufd::<0xaa>(&a);
+    let mut y: Simd128 = *b;
+    Simd128::pslldq::<0x04>(&mut y);
+    Simd128::pxor(b, &y);
+    Simd128::pslldq::<0x04>(&mut y);
+    Simd128::pxor(b, &y);
+    Simd128::pslldq::<0x04>(&mut y);
+    Simd128::pxor(b, &y);
+    Simd128::pxor(b, &a);
 }
 
 #[inline(always)]
-fn expand256(key: &[u8; 32], rkeys: &mut [u64x2; 15]) {
-    let mut key0_xmm = u64x2::read(array_ref![key, 0, 16]);
-    let mut key1_xmm = u64x2::read(array_ref![key, 16, 16]);
+fn expand256(key: &[u8; 32], rkeys: &mut [Simd128; 15]) {
+    let mut key0_xmm = Simd128::read(array_ref![key, 0, 16]);
+    let mut key1_xmm = Simd128::read(array_ref![key, 16, 16]);
 
     // 0
     rkeys[0] = key0_xmm;
     rkeys[1] = key1_xmm;
 
     // 2
-    assist256_1(&mut key0_xmm, intrinsics::aeskeygenassist_0x01(&key1_xmm));
-    assist256_2(intrinsics::aeskeygenassist_0x00(&key0_xmm), &mut key1_xmm);
+    assist256_1(&mut key0_xmm, Simd128::aeskeygenassist::<0x01>(&key1_xmm));
+    assist256_2(Simd128::aeskeygenassist::<0x00>(&key0_xmm), &mut key1_xmm);
     rkeys[2] = key0_xmm;
     rkeys[3] = key1_xmm;
 
     // 4
-    assist256_1(&mut key0_xmm, intrinsics::aeskeygenassist_0x02(&key1_xmm));
-    assist256_2(intrinsics::aeskeygenassist_0x00(&key0_xmm), &mut key1_xmm);
+    assist256_1(&mut key0_xmm, Simd128::aeskeygenassist::<0x02>(&key1_xmm));
+    assist256_2(Simd128::aeskeygenassist::<0x00>(&key0_xmm), &mut key1_xmm);
     rkeys[4] = key0_xmm;
     rkeys[5] = key1_xmm;
 
     // 6
-    assist256_1(&mut key0_xmm, intrinsics::aeskeygenassist_0x04(&key1_xmm));
-    assist256_2(intrinsics::aeskeygenassist_0x00(&key0_xmm), &mut key1_xmm);
+    assist256_1(&mut key0_xmm, Simd128::aeskeygenassist::<0x04>(&key1_xmm));
+    assist256_2(Simd128::aeskeygenassist::<0x00>(&key0_xmm), &mut key1_xmm);
     rkeys[6] = key0_xmm;
     rkeys[7] = key1_xmm;
 
     // 8
-    assist256_1(&mut key0_xmm, intrinsics::aeskeygenassist_0x08(&key1_xmm));
-    assist256_2(intrinsics::aeskeygenassist_0x00(&key0_xmm), &mut key1_xmm);
+    assist256_1(&mut key0_xmm, Simd128::aeskeygenassist::<0x08>(&key1_xmm));
+    assist256_2(Simd128::aeskeygenassist::<0x00>(&key0_xmm), &mut key1_xmm);
     rkeys[8] = key0_xmm;
     rkeys[9] = key1_xmm;
 
     // 10
-    assist256_1(&mut key0_xmm, intrinsics::aeskeygenassist_0x10(&key1_xmm));
-    assist256_2(intrinsics::aeskeygenassist_0x00(&key0_xmm), &mut key1_xmm);
+    assist256_1(&mut key0_xmm, Simd128::aeskeygenassist::<0x10>(&key1_xmm));
+    assist256_2(Simd128::aeskeygenassist::<0x00>(&key0_xmm), &mut key1_xmm);
     rkeys[10] = key0_xmm;
     rkeys[11] = key1_xmm;
 
     // 12
-    assist256_1(&mut key0_xmm, intrinsics::aeskeygenassist_0x20(&key1_xmm));
-    assist256_2(intrinsics::aeskeygenassist_0x00(&key0_xmm), &mut key1_xmm);
+    assist256_1(&mut key0_xmm, Simd128::aeskeygenassist::<0x20>(&key1_xmm));
+    assist256_2(Simd128::aeskeygenassist::<0x00>(&key0_xmm), &mut key1_xmm);
     rkeys[12] = key0_xmm;
     rkeys[13] = key1_xmm;
 
     // 14
-    assist256_1(&mut key0_xmm, intrinsics::aeskeygenassist_0x40(&key1_xmm));
+    assist256_1(&mut key0_xmm, Simd128::aeskeygenassist::<0x40>(&key1_xmm));
     rkeys[14] = key0_xmm;
 }
 
 pub fn expand256_slice(key: &[u8; 32], rkeys: &mut [[u8; 16]; 15]) {
-    let mut rkeys_xmm = [u64x2(0, 0); 15];
+    let mut rkeys_xmm = [Simd128::from(0); 15];
     expand256(key, &mut rkeys_xmm);
     for i in 0..15 {
         rkeys_xmm[i].write(&mut rkeys[i])
@@ -87,22 +86,22 @@ pub fn expand256_slice(key: &[u8; 32], rkeys: &mut [[u8; 16]; 15]) {
 }
 
 #[allow(clippy::needless_range_loop)]
-fn aes256_rkeys_xmm(dst: &mut [u8; 16], src: &[u8; 16], rkeys: &[u64x2; 15]) {
-    let mut state_xmm = u64x2::read(src);
+fn aes256_rkeys_xmm(dst: &mut [u8; 16], src: &[u8; 16], rkeys: &[Simd128; 15]) {
+    let mut state_xmm = Simd128::read(src);
 
-    intrinsics::pxor(&mut state_xmm, &rkeys[0]);
+    Simd128::pxor(&mut state_xmm, &rkeys[0]);
     for i in 1..14 {
-        intrinsics::aesenc(&mut state_xmm, &rkeys[i]);
+        Simd128::aesenc(&mut state_xmm, &rkeys[i]);
     }
-    intrinsics::aesenclast(&mut state_xmm, &rkeys[14]);
+    Simd128::aesenclast(&mut state_xmm, &rkeys[14]);
 
     state_xmm.write(dst);
 }
 
 pub fn aes256_rkeys_slice(dst: &mut [u8; 16], src: &[u8; 16], rkeys: &[[u8; 16]; 15]) {
-    let mut rkeys_xmm = [u64x2(0, 0); 15];
+    let mut rkeys_xmm = [Simd128::from(0); 15];
     for i in 0..15 {
-        rkeys_xmm[i] = u64x2::read(&rkeys[i]);
+        rkeys_xmm[i] = Simd128::read(&rkeys[i]);
     }
 
     aes256_rkeys_xmm(dst, src, &rkeys_xmm);
@@ -110,7 +109,7 @@ pub fn aes256_rkeys_slice(dst: &mut [u8; 16], src: &[u8; 16], rkeys: &[[u8; 16];
 
 #[cfg(test)]
 pub fn aes256_ret(src: &[u8; 16], key: &[u8; 32]) -> [u8; 16] {
-    let mut rkeys = [u64x2(0, 0); 15];
+    let mut rkeys = [Simd128::from(0); 15];
     expand256(key, &mut rkeys);
 
     let mut dst = [0u8; 16];
@@ -122,7 +121,7 @@ pub fn aes256_ret(src: &[u8; 16], key: &[u8; 32]) -> [u8; 16] {
 mod tests {
     use super::*;
     use crate::primitives::constants;
-    use crate::primitives::intrinsics;
+    use crate::primitives::simd128;
     use arrayref::array_mut_ref;
 
     #[test]
@@ -256,7 +255,7 @@ mod tests {
     fn test_aesenc_nokey() {
         let mut state = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         let rkey = [0u8; 16];
-        intrinsics::tests::aesenc_slice(&mut state, &rkey);
+        simd128::tests::aesenc_slice(&mut state, &rkey);
 
         let mut state_manual = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         subbytes(&mut state_manual);
@@ -270,7 +269,7 @@ mod tests {
     fn test_aesenclast_nokey() {
         let mut state = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         let rkey = [0u8; 16];
-        intrinsics::tests::aesenclast_slice(&mut state, &rkey);
+        simd128::tests::aesenclast_slice(&mut state, &rkey);
 
         let mut state_manual = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         subbytes(&mut state_manual);
@@ -289,7 +288,7 @@ mod tests {
     fn test_aesenc() {
         let mut state = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         let rkey = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-        intrinsics::tests::aesenc_slice(&mut state, &rkey);
+        simd128::tests::aesenc_slice(&mut state, &rkey);
 
         let mut state_manual = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         subbytes(&mut state_manual);
@@ -304,7 +303,7 @@ mod tests {
     fn test_aesenclast() {
         let mut state = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         let rkey = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-        intrinsics::tests::aesenclast_slice(&mut state, &rkey);
+        simd128::tests::aesenclast_slice(&mut state, &rkey);
 
         let mut state_manual = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
         subbytes(&mut state_manual);
@@ -375,7 +374,7 @@ mod tests {
                     \x10\x11\x12\x13\x14\x15\x16\x17\
                     \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
         b.iter(|| {
-            let mut rkeys = [u64x2(0, 0); 15];
+            let mut rkeys = [Simd128::from(0); 15];
             expand256(black_box(key), &mut rkeys);
             rkeys
         });
@@ -389,7 +388,7 @@ mod tests {
                     \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\
                     \x10\x11\x12\x13\x14\x15\x16\x17\
                     \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
-        let mut rkeys = [u64x2(0, 0); 15];
+        let mut rkeys = [Simd128::from(0); 15];
         expand256(key, &mut rkeys);
 
         b.iter(|| {

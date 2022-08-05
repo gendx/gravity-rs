@@ -1,4 +1,3 @@
-#![feature(repr_simd)]
 #![cfg_attr(test, feature(test, bench_black_box))]
 
 #[cfg(test)]
