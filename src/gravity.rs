@@ -71,8 +71,10 @@ impl SecKey {
             address.shift(MERKLE_H); // Update instance
         }
 
-        let index = address.get_instance();
-        self.cache.gen_auth(&mut sign.auth_c, index);
+        // For compatibility with 32-bit architectures, the index must fit in 32 bits here.
+        let index: u64 = address.get_instance();
+        debug_assert!(index <= u32::MAX as u64);
+        self.cache.gen_auth(&mut sign.auth_c, index as usize);
 
         sign
     }
@@ -107,8 +109,10 @@ impl Signature {
                 address.shift(MERKLE_H);
             }
 
-            let index = address.get_instance();
-            merkle::merkle_compress_auth(&mut h, &self.auth_c, GRAVITY_C, index);
+            // For compatibility with 32-bit architectures, the index must fit in 32 bits here.
+            let index: u64 = address.get_instance();
+            debug_assert!(index <= u32::MAX as u64);
+            merkle::merkle_compress_auth(&mut h, &self.auth_c, GRAVITY_C, index as usize);
             Some(h)
         } else {
             None

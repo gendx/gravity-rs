@@ -23,8 +23,8 @@ impl Address {
         Self { layer, instance }
     }
 
-    pub fn get_instance(&self) -> usize {
-        self.instance as usize
+    pub fn get_instance(&self) -> u64 {
+        self.instance
     }
 
     pub fn incr_instance(&mut self) {
