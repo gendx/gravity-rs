@@ -21,11 +21,12 @@ impl default::Default for Signature {
 // Split a message into a list of Winternitz indices (with checksum)
 #[allow(clippy::needless_range_loop)]
 fn split_msg(msg: &Hash) -> [usize; WOTS_ELL] {
-    // TODO: use some kind of static_assert instead
-    assert_eq!(
-        WOTS_W, 16,
-        "Winternitz OTS is only implemented for WOTS_W = 16"
-    );
+    const {
+        assert!(
+            WOTS_W == 16,
+            "Winternitz OTS is only implemented for WOTS_W = 16"
+        );
+    }
 
     let mut result = [0; WOTS_ELL];
     let mut checksum: usize = 0;
@@ -142,11 +143,10 @@ mod tests {
         expect[65] = 0xC;
         expect[66] = 0x3;
         assert_eq!(
-            0x0 + 0xC * WOTS_W + 0x3 * WOTS_W * WOTS_W,
+            expect[64] + expect[65] * WOTS_W + expect[66] * WOTS_W * WOTS_W,
             WOTS_ELL1 * (WOTS_W - 1)
         );
-        // TODO: cannot use assert_eq for [usize; 67]
-        assert_eq!(&lengths as &[usize], &expect as &[usize]);
+        assert_eq!(lengths, expect);
     }
 
     #[test]
@@ -170,8 +170,7 @@ mod tests {
             expect[64] + expect[65] * WOTS_W + expect[66] * WOTS_W * WOTS_W,
             checksum
         );
-        // TODO: cannot use assert_eq for [usize; 67]
-        assert_eq!(&lengths as &[usize], &expect as &[usize]);
+        assert_eq!(lengths, expect);
     }
 
     use std::hint::black_box;

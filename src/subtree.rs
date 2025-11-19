@@ -62,7 +62,7 @@ impl<'a> SecKey<'a> {
 impl PubKey {
     #[cfg(test)]
     pub fn verify(&self, address: &address::Address, sign: &Signature, msg: &Hash) -> bool {
-        let h = sign.extract(&address, msg);
+        let h = sign.extract(address, msg);
         self.h == h
     }
 }

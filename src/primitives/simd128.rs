@@ -19,7 +19,7 @@ pub(crate) struct Simd128(__m128i);
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 impl Simd128 {
     pub const fn from(x: u128) -> Self {
-        Self(unsafe { transmute(x) })
+        Self(unsafe { transmute::<u128, __m128i>(x) })
     }
 
     /// Read from array pointer (potentially unaligned)

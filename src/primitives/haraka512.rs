@@ -136,8 +136,7 @@ mod tests {
             0x36, 0x97, 0x60, 0x28, 0xe8, 0x11, 0xbb, 0xfd,
         ];
         aes4_slice(&mut state, 0);
-        // TODO: cannot use assert_eq for [u8; 64]
-        assert_eq!(&state as &[u8], &expect as &[u8]);
+        assert_eq!(state, expect);
     }
 
     fn aes_mix4_slice(state: &mut [u8; 64], rci: usize) {
@@ -170,8 +169,7 @@ mod tests {
             0x0e, 0x4c, 0xf6, 0x74, 0x36, 0x97, 0x60, 0x28,
         ];
         aes_mix4_slice(&mut state, 0);
-        // TODO: cannot use assert_eq for [u8; 64]
-        assert_eq!(&state as &[u8], &expect as &[u8]);
+        assert_eq!(state, expect);
     }
 
     fn truncstore_slice(dst: &mut [u8; 32], state: &[u8; 64]) {
@@ -222,7 +220,7 @@ mod tests {
                        \x13\xb2\x92\x28\x7f\x30\x6f\x62\
                        \x5a\x6d\x57\x33\x1c\xae\x5f\x34\
                        \xdd\x92\x77\xb0\x94\x5b\xe2\xaa";
-        haraka512_bis::<5>(&mut dst, &src);
+        haraka512_bis::<5>(&mut dst, src);
         assert_eq!(&dst, expect);
     }
 
@@ -241,7 +239,7 @@ mod tests {
                        \x15\x3c\x9a\x54\x13\xfb\x1e\x98\
                        \x4a\x91\x4f\x5b\x6f\xea\x17\x22\
                        \x85\x41\xce\x17\x07\xfc\x4e\x64";
-        haraka512_bis::<6>(&mut dst, &src);
+        haraka512_bis::<6>(&mut dst, src);
         assert_eq!(&dst, expect);
     }
 
@@ -270,7 +268,7 @@ mod tests {
                      \x28\x29\x2a\x2b\x2c\x2d\x2e\x2f\
                      \x30\x31\x32\x33\x34\x35\x36\x37\
                      \x38\x39\x3a\x3b\x3c\x3d\x3e\x3f";
-        b.iter(|| haraka512_through::<5>(black_box(&src1), black_box(&src2)));
+        b.iter(|| haraka512_through::<5>(black_box(src1), black_box(src2)));
     }
 
     #[bench]
@@ -283,7 +281,7 @@ mod tests {
                     \x28\x29\x2a\x2b\x2c\x2d\x2e\x2f\
                     \x30\x31\x32\x33\x34\x35\x36\x37\
                     \x38\x39\x3a\x3b\x3c\x3d\x3e\x3f";
-        b.iter(|| haraka512_through_bis::<5>(black_box(&src)));
+        b.iter(|| haraka512_through_bis::<5>(black_box(src)));
     }
 
     #[bench]
@@ -296,7 +294,7 @@ mod tests {
                      \x28\x29\x2a\x2b\x2c\x2d\x2e\x2f\
                      \x30\x31\x32\x33\x34\x35\x36\x37\
                      \x38\x39\x3a\x3b\x3c\x3d\x3e\x3f";
-        b.iter(|| haraka512_through::<6>(black_box(&src1), black_box(&src2)));
+        b.iter(|| haraka512_through::<6>(black_box(src1), black_box(src2)));
     }
 
     #[bench]
@@ -309,6 +307,6 @@ mod tests {
                     \x28\x29\x2a\x2b\x2c\x2d\x2e\x2f\
                     \x30\x31\x32\x33\x34\x35\x36\x37\
                     \x38\x39\x3a\x3b\x3c\x3d\x3e\x3f";
-        b.iter(|| haraka512_through_bis::<6>(black_box(&src)));
+        b.iter(|| haraka512_through_bis::<6>(black_box(src)));
     }
 }

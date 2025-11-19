@@ -18,6 +18,11 @@ pub const PORS_TAU: usize = TAU;
 pub const PORS_T: usize = 1 << PORS_TAU;
 pub const PORS_K: usize = K;
 
+const _: () = const {
+    assert!(PORS_K > 0);
+    assert!(PORS_K <= PORS_T);
+};
+
 // Implicit constraint: GRAVITY_C + MERKLE_H * GRAVITY_D <= 64
 pub const MERKLE_H: usize = H;
 pub const MERKLE_H_MASK: usize = (1 << MERKLE_H) - 1;
@@ -28,6 +33,10 @@ const GRAVITY_HD: usize = MERKLE_H * GRAVITY_D;
 // Note: dirty hack to avoid shift overflow when GRAVITY_H = 64
 pub const GRAVITY_MASK: u64 =
     0xFFFF_FFFF_FFFF_FFFF_u64 ^ ((0xFFFF_FFFF_FFFF_FFFF_u64 << GRAVITY_HD) << GRAVITY_C);
+
+const _: () = const {
+    assert!(GRAVITY_C + MERKLE_H * GRAVITY_D <= 64);
+};
 
 #[cfg(test)]
 #[derive(Debug, PartialEq)]
@@ -74,16 +83,5 @@ mod tests {
             WOTS_ELL1 * (WOTS_W.trailing_zeros() as usize),
             HASH_SIZE * 8
         );
-    }
-
-    #[test]
-    fn test_pors() {
-        assert!(PORS_K > 0);
-        assert!(PORS_K <= PORS_T);
-    }
-
-    #[test]
-    fn test_gravity() {
-        assert!(GRAVITY_C + MERKLE_H * GRAVITY_D <= 64);
     }
 }

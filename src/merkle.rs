@@ -29,9 +29,7 @@ impl MerkleBuf {
 
     #[cfg(test)]
     pub fn fill_leaves(&mut self, leaves: &[Hash]) {
-        for i in 0..leaves.len() {
-            self.buf[i] = leaves[i];
-        }
+        self.buf[..leaves.len()].copy_from_slice(leaves);
     }
 }
 

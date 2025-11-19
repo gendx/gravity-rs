@@ -149,10 +149,7 @@ mod tests {
 
     #[test]
     fn test_sign_verify() {
-        let mut random = [0u8; 64];
-        for i in 0..64 {
-            random[i] = i as u8;
-        }
+        let random: [u8; 64] = std::array::from_fn(|i| i as u8);
 
         let sk = SecKey::new(&random);
         let pk = sk.genpk();

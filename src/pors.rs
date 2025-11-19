@@ -111,14 +111,14 @@ pub fn sign(prng: &prng::Prng, salt: &Hash, msg: &Hash) -> (address::Address, Ha
 }
 
 #[allow(clippy::needless_range_loop)]
-#[allow(clippy::assertions_on_constants)]
 fn obtain_address_subset(pepper: &Hash, msg: &Hash) -> (address::Address, [usize; PORS_K]) {
-    // TODO: use some kind of static_assert instead
-    assert!(PORS_K > 0, "PORS is only implemented for PORS_K > 0");
-    assert!(
-        PORS_K <= PORS_T,
-        "PORS is only implemented for PORS_K <= PORS_T"
-    );
+    const {
+        assert!(PORS_K > 0, "PORS is only implemented for PORS_K > 0");
+        assert!(
+            PORS_K <= PORS_T,
+            "PORS is only implemented for PORS_K <= PORS_T"
+        );
+    }
 
     let seed = hash::hash_2n_to_n_ret(pepper, msg);
     let prng = prng::Prng::new(&seed);

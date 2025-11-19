@@ -1,7 +1,9 @@
 # gravity-rs
 
-![Build Status](https://github.com/gendx/gravity-rs/workflows/Build/badge.svg)
-![Test Status](https://github.com/gendx/gravity-rs/workflows/Tests/badge.svg)
+[![Minimum Rust 1.85.0](https://img.shields.io/badge/rust-1.85.0%2B-orange.svg?logo=rust)](https://releases.rs/docs/1.85.0/)
+[![Dependencies](https://deps.rs/repo/github/gendx/gravity-rs/status.svg)](https://deps.rs/repo/github/gendx/gravity-rs)
+[![Build Status](https://github.com/gendx/gravity-rs/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/gendx/gravity-rs/actions/workflows/build.yml)
+[![Test Status](https://github.com/gendx/gravity-rs/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/gendx/gravity-rs/actions/workflows/tests.yml)
 
 A Rust implementation of the [Gravity-post-quantum](https://github.com/gravity-postquantum) signature schemes.
 

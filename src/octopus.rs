@@ -149,11 +149,7 @@ pub fn merkle_compress_octopus(
         count = j;
     }
 
-    if len == octolen {
-        Some(nodes[0])
-    } else {
-        None
-    }
+    if len == octolen { Some(nodes[0]) } else { None }
 }
 
 #[cfg(test)]
@@ -325,10 +321,8 @@ mod tests {
                 let x = BigEndian::read_u32(array_ref![block.h, 4 * i, 4]) as usize;
                 let x = x % PORS_T;
 
-                for i in 0..count {
-                    if subset[i] == x {
-                        continue 'inner;
-                    }
+                if subset[..count].contains(&x) {
+                    continue 'inner;
                 }
 
                 subset[count] = x;

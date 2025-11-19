@@ -175,12 +175,8 @@ mod tests {
         state[9] = state[13];
         state[13] = tmp;
 
-        let tmp = state[2];
-        state[2] = state[10];
-        state[10] = tmp;
-        let tmp = state[6];
-        state[6] = state[14];
-        state[14] = tmp;
+        state.swap(2, 10);
+        state.swap(6, 14);
 
         let tmp = state[3];
         state[3] = state[15];

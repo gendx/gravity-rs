@@ -19,3 +19,5 @@ jobs:
           components: clippy
       - name: Check Clippy lints
         run: cargo clippy --target ${{ matrix.target }} --verbose
+      - name: Check Clippy lints on tests
+        run: cargo clippy --target ${{ matrix.target }} --verbose --tests

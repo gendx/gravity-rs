@@ -65,6 +65,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::needless_range_loop)]
     fn test_genblocks() {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
         let mut dst = [Default::default(); 3];
