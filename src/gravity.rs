@@ -341,18 +341,9 @@ mod tests {
                                \x10\x11\x12\x13\x14\x15\x16\x17\
                                \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
         let hex_file = match P::config_type() {
-            ConfigType::S => {
-                let hex_file = include_str!("../test_files/test_sign_zero_S.hex");
-                hex_file
-            }
-            ConfigType::M => {
-                let hex_file = include_str!("../test_files/test_sign_zero_M.hex");
-                hex_file
-            }
-            ConfigType::L => {
-                let hex_file = include_str!("../test_files/test_sign_zero_L.hex");
-                hex_file
-            }
+            ConfigType::S => include_str!("../test_files/test_sign_zero_S.hex"),
+            ConfigType::M => include_str!("../test_files/test_sign_zero_M.hex"),
+            ConfigType::L => include_str!("../test_files/test_sign_zero_L.hex"),
             ConfigType::Unknown => unimplemented!(),
         };
 
@@ -366,7 +357,14 @@ mod tests {
         let sign = sk.sign_bytes(&msg);
         let mut sign_bytes = Vec::<u8>::new();
         sign.serialize(&mut sign_bytes);
-        assert_eq!(sign_bytes, expect);
+
+        let (chunks, remainder) = sign_bytes.as_chunks::<32>();
+        for chunk in chunks {
+            println!("{}", hex::encode(chunk));
+        }
+        println!("{}", hex::encode(remainder));
+
+        assert!(sign_bytes == expect);
     }
 
     fn test_genkey_kat<P: GravityParams>()
@@ -448,7 +446,13 @@ mod tests {
         let mut sign_bytes = Vec::<u8>::new();
         sign.serialize(&mut sign_bytes);
 
-        assert_eq!(sign_bytes, expect);
+        let (chunks, remainder) = sign_bytes.as_chunks::<32>();
+        for chunk in chunks {
+            println!("{}", hex::encode_upper(chunk));
+        }
+        println!("{}", hex::encode_upper(remainder));
+
+        assert!(sign_bytes == expect);
     }
 
     macro_rules! all_benches {
