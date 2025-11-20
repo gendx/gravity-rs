@@ -84,7 +84,7 @@ impl<P: GravityParams> Octopus<P> {
 
 pub fn merkle_gen_octopus<P: GravityParams>(
     buf: &mut merkle::MerkleBuf,
-    indices: &mut [usize],
+    mut indices: [usize; P::PORS_K],
 ) -> (Hash, Octopus<P>) {
     let height = buf.height();
     let mut n = 1 << height;
@@ -132,7 +132,7 @@ pub fn merkle_compress_octopus<P: GravityParams>(
     nodes: &mut [Hash],
     octopus: &Octopus<P>,
     height: usize,
-    indices: &mut [usize],
+    mut indices: [usize; P::PORS_K],
 ) -> Option<Hash> {
     let octolen = octopus.oct.len();
     let mut len = 0;
@@ -179,15 +179,59 @@ pub fn merkle_compress_octopus<P: GravityParams>(
 mod tests {
     use super::*;
 
+    #[derive(Debug, PartialEq)]
+    struct Octopus83;
+
+    impl GravityParams for Octopus83 {
+        #[cfg(test)]
+        fn config_type() -> ConfigType {
+            ConfigType::Unknown
+        }
+
+        fn check_params() {
+            // TODO: Move this implementation to the trait when supported.
+            const {
+                assert!(Self::PORS_K > 0);
+                assert!(Self::PORS_K <= Self::PORS_T);
+            };
+        }
+
+        const TAU: usize = 3;
+        const K: usize = 3;
+        // Irrelevant here.
+        const H: usize = 0;
+        const D: usize = 0;
+        const C: usize = 0;
+    }
+
+    #[derive(Debug, PartialEq)]
+    struct Octopus84;
+
+    impl GravityParams for Octopus84 {
+        #[cfg(test)]
+        fn config_type() -> ConfigType {
+            ConfigType::Unknown
+        }
+
+        fn check_params() {
+            // TODO: Move this implementation to the trait when supported.
+            const {
+                assert!(Self::PORS_K > 0);
+                assert!(Self::PORS_K <= Self::PORS_T);
+            };
+        }
+
+        const TAU: usize = 3;
+        const K: usize = 4;
+        // Irrelevant here.
+        const H: usize = 0;
+        const D: usize = 0;
+        const C: usize = 0;
+    }
+
     macro_rules! all_tests {
         ( $mod:ident, $params:ty ) => {
-            crate::tests::param_tests!(
-                $mod,
-                $params,
-                test_octopus_size,
-                test_merkle_gen_octopus,
-                test_merkle_gen_compress_octopus,
-            );
+            crate::tests::param_tests!($mod, $params, test_octopus_size,);
         };
     }
 
@@ -215,7 +259,7 @@ mod tests {
     fn merkle_gen_octopus_leaves<P: GravityParams>(
         leaves: &[Hash],
         height: usize,
-        indices: &mut [usize],
+        indices: [usize; P::PORS_K],
     ) -> (Hash, Octopus<P>) {
         let count = leaves.len();
         assert_eq!(count, 1 << height);
@@ -226,7 +270,8 @@ mod tests {
         merkle_gen_octopus(&mut buf, indices)
     }
 
-    fn test_merkle_gen_octopus<P: GravityParams>() {
+    #[test]
+    fn test_merkle_gen_octopus() {
         let h0 = hash::tests::HASH_ELEMENT;
         let h1 = hash::hash_n_to_n_ret(&h0);
         let h2 = hash::hash_n_to_n_ret(&h1);
@@ -247,7 +292,7 @@ mod tests {
         let h14 = hash::hash_2n_to_n_ret(&h12, &h13);
 
         let src = [h0, h1, h2, h3, h4, h5, h6, h7];
-        let (root, octopus) = merkle_gen_octopus_leaves::<P>(&src, 3, &mut [0, 2, 3, 6]);
+        let (root, octopus) = merkle_gen_octopus_leaves::<Octopus84>(&src, 3, [0, 2, 3, 6]);
         assert_eq!(
             octopus,
             Octopus {
@@ -258,7 +303,8 @@ mod tests {
         assert_eq!(root, h14);
     }
 
-    fn test_merkle_gen_compress_octopus<P: GravityParams>() {
+    #[test]
+    fn test_merkle_gen_compress_octopus() {
         let h0 = hash::tests::HASH_ELEMENT;
         let h1 = hash::hash_n_to_n_ret(&h0);
         let h2 = hash::hash_n_to_n_ret(&h1);
@@ -273,10 +319,11 @@ mod tests {
         for i in 0..6 {
             for j in (i + 1)..7 {
                 for k in (j + 1)..8 {
-                    let (root, octopus) = merkle_gen_octopus_leaves::<P>(&src, 3, &mut [i, j, k]);
+                    let (root, octopus) =
+                        merkle_gen_octopus_leaves::<Octopus83>(&src, 3, [i, j, k]);
+
                     let mut nodes = [src[i], src[j], src[k]];
-                    let compressed =
-                        merkle_compress_octopus(&mut nodes, &octopus, 3, &mut [i, j, k]);
+                    let compressed = merkle_compress_octopus(&mut nodes, &octopus, 3, [i, j, k]);
                     assert_eq!(compressed, Some(root));
                 }
             }
@@ -304,58 +351,25 @@ mod tests {
     use std::hint::black_box;
     use test::Bencher;
 
-    #[derive(Debug, PartialEq)]
-    struct Octopus8;
-
-    impl GravityParams for Octopus8 {
-        #[cfg(test)]
-        fn config_type() -> ConfigType {
-            ConfigType::Unknown
-        }
-
-        #[allow(clippy::absurd_extreme_comparisons)]
-        fn check_params() {
-            // TODO: Move this implementation to the trait when supported.
-            const {
-                assert!(Self::PORS_K > 0);
-                assert!(Self::PORS_K <= Self::PORS_T);
-                assert!(Self::GRAVITY_C + Self::MERKLE_H * Self::GRAVITY_D <= 64);
-            };
-        }
-
-        const TAU: usize = 3;
-        // Irrelevant here.
-        const K: usize = 1;
-        const H: usize = 0;
-        const D: usize = 0;
-        const C: usize = 0;
+    #[bench]
+    fn bench_merkle_gen_octopus_8_4(b: &mut Bencher) {
+        const HEIGHT: usize = 3;
+        let src = [hash::tests::HASH_ELEMENT; 1 << HEIGHT];
+        let indices = [0, 2, 3, 6];
+        b.iter(|| merkle_gen_octopus_leaves::<Octopus84>(black_box(&src), HEIGHT, indices));
     }
 
     #[bench]
-    fn bench_merkle_gen_octopus_8(b: &mut Bencher) {
+    fn bench_merkle_compress_octopus_8_3(b: &mut Bencher) {
         const HEIGHT: usize = 3;
         let src = [hash::tests::HASH_ELEMENT; 1 << HEIGHT];
-        let mut indices = [0, 2, 3, 6];
-        b.iter(|| merkle_gen_octopus_leaves::<Octopus8>(black_box(&src), HEIGHT, &mut indices));
-    }
+        let indices = [0, 2, 3];
 
-    #[bench]
-    fn bench_merkle_compress_octopus_8(b: &mut Bencher) {
-        const HEIGHT: usize = 3;
-        let src = [hash::tests::HASH_ELEMENT; 1 << HEIGHT];
-        let mut indices = [0, 2, 3];
-
-        let (_, octopus) =
-            merkle_gen_octopus_leaves::<Octopus8>(&src, HEIGHT, &mut indices.clone());
+        let (_, octopus) = merkle_gen_octopus_leaves::<Octopus83>(&src, HEIGHT, indices);
 
         let mut nodes = indices.map(|i| src[i]);
         b.iter(|| {
-            merkle_compress_octopus(
-                black_box(&mut nodes),
-                black_box(&octopus),
-                HEIGHT,
-                &mut indices,
-            )
+            merkle_compress_octopus(black_box(&mut nodes), black_box(&octopus), HEIGHT, indices)
         })
     }
 
@@ -367,8 +381,8 @@ mod tests {
         let mut buf = merkle::MerkleBuf::new(P::PORS_TAU);
         hash::hash_parallel(buf.slice_leaves_mut(), &src, P::PORS_T);
 
-        let mut subset = fake_pors_subset::<P>();
-        b.iter(|| merkle_gen_octopus::<P>(black_box(&mut buf), &mut subset));
+        let subset = fake_pors_subset::<P>();
+        b.iter(|| merkle_gen_octopus::<P>(black_box(&mut buf), subset));
     }
 
     fn bench_merkle_compress_octopus_pors<P: GravityParams>(b: &mut Bencher)
@@ -379,8 +393,8 @@ mod tests {
         let mut buf = merkle::MerkleBuf::new(P::PORS_TAU);
         hash::hash_parallel(buf.slice_leaves_mut(), &src, P::PORS_T);
 
-        let mut subset = fake_pors_subset::<P>();
-        let (_, octopus) = merkle_gen_octopus::<P>(&mut buf, &mut subset.clone());
+        let subset = fake_pors_subset::<P>();
+        let (_, octopus) = merkle_gen_octopus::<P>(&mut buf, subset);
 
         let mut nodes = subset.map(|i| src[i]);
         b.iter(|| {
@@ -388,7 +402,7 @@ mod tests {
                 black_box(&mut nodes),
                 black_box(&octopus),
                 P::PORS_TAU,
-                &mut subset,
+                subset,
             )
         });
     }

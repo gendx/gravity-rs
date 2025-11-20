@@ -51,7 +51,7 @@ impl<P: GravityParams> SecKey<P> {
     }
 
     #[allow(clippy::needless_range_loop)]
-    pub fn sign_subset(&self, pepper: Hash, mut subset: [usize; P::PORS_K]) -> (Hash, Signature<P>)
+    pub fn sign_subset(&self, pepper: Hash, subset: [usize; P::PORS_K]) -> (Hash, Signature<P>)
     where
         [(); P::PORS_K]:,
     {
@@ -59,7 +59,7 @@ impl<P: GravityParams> SecKey<P> {
 
         let mut buf = merkle::MerkleBuf::new(P::PORS_TAU);
         hash::hash_parallel(buf.slice_leaves_mut(), self.values.as_slice(), P::PORS_T);
-        let (root, octopus) = octopus::merkle_gen_octopus(&mut buf, &mut subset);
+        let (root, octopus) = octopus::merkle_gen_octopus(&mut buf, subset);
 
         let sign = Signature {
             pepper,
@@ -89,11 +89,10 @@ where
     [(); P::PORS_K]:,
 {
     pub fn extract(&self, msg: &Hash) -> Option<(address::Address, Hash)> {
-        let (address, mut subset) = obtain_address_subset(&self.pepper, msg);
+        let (address, subset) = obtain_address_subset(&self.pepper, msg);
         let mut nodes = [Default::default(); P::PORS_K];
         hash::hash_parallel_all(&mut nodes, &self.values);
-        let root =
-            octopus::merkle_compress_octopus(&mut nodes, &self.octopus, P::PORS_TAU, &mut subset);
+        let root = octopus::merkle_compress_octopus(&mut nodes, &self.octopus, P::PORS_TAU, subset);
         root.map(|h| (address, h))
     }
 
