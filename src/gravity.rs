@@ -175,6 +175,30 @@ where
         }
     }
 
+    #[cfg(test)]
+    pub fn min_size_bytes() -> usize {
+        Self::min_size_hashes() * config::HASH_SIZE
+    }
+
+    #[cfg(test)]
+    pub fn max_size_bytes() -> usize {
+        Self::max_size_hashes() * config::HASH_SIZE
+    }
+
+    #[cfg(test)]
+    pub fn max_size_hashes() -> usize {
+        pors::Signature::<P>::max_size_hashes()
+            + subtree::Signature::<P>::size_hashes() * P::GRAVITY_D
+            + P::GRAVITY_C
+    }
+
+    #[cfg(test)]
+    pub fn min_size_hashes() -> usize {
+        pors::Signature::<P>::min_size_hashes()
+            + subtree::Signature::<P>::size_hashes() * P::GRAVITY_D
+            + P::GRAVITY_C
+    }
+
     pub fn serialize(&self, output: &mut Vec<u8>) {
         self.pors_sign.serialize(output);
         for t in self.subtrees.iter() {
@@ -211,6 +235,7 @@ mod tests {
             crate::tests::param_tests!(
                 $mod,
                 $params,
+                test_signature_size,
                 test_sign_verify,
                 test_genkey_zeros,
                 test_sign_zeros,
@@ -223,6 +248,32 @@ mod tests {
     all_tests!(small, GravitySmall);
     all_tests!(medium, GravityMedium);
     all_tests!(large, GravityLarge);
+
+    fn test_signature_size<P: GravityParams>()
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
+        let (expected_min_hashes, expected_max_hashes) = match P::config_type() {
+            ConfigType::S => (118, 395),
+            ConfigType::M => (563, 904),
+            ConfigType::L => (774, 1099),
+            ConfigType::Unknown => unimplemented!(),
+        };
+        assert_eq!(Signature::<P>::min_size_hashes(), expected_min_hashes);
+        assert_eq!(Signature::<P>::max_size_hashes(), expected_max_hashes);
+
+        let (expected_min_bytes, expected_max_bytes) = match P::config_type() {
+            ConfigType::S => (3776, 12640),
+            ConfigType::M => (18016, 28928),
+            ConfigType::L => (24768, 35168),
+            ConfigType::Unknown => unimplemented!(),
+        };
+        assert_eq!(Signature::<P>::min_size_bytes(), expected_min_bytes);
+        assert_eq!(Signature::<P>::max_size_bytes(), expected_max_bytes);
+    }
 
     fn test_sign_verify<P: GravityParams>()
     where

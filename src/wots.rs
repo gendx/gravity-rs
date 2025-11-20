@@ -97,6 +97,11 @@ impl Signature {
         ltree_leaves_ret(&buf)
     }
 
+    #[cfg(test)]
+    pub fn size_hashes() -> usize {
+        WOTS_ELL
+    }
+
     pub fn serialize(&self, output: &mut Vec<u8>) {
         for x in self.0.iter() {
             x.serialize(output);

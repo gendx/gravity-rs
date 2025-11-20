@@ -103,6 +103,11 @@ where
         h
     }
 
+    #[cfg(test)]
+    pub fn size_hashes() -> usize {
+        wots::Signature::size_hashes() + P::MERKLE_H
+    }
+
     pub fn serialize(&self, output: &mut Vec<u8>) {
         self.wots_sign.serialize(output);
         for x in self.auth.iter() {
@@ -128,13 +133,24 @@ mod tests {
 
     macro_rules! all_tests {
         ( $mod:ident, $params:ty ) => {
-            crate::tests::param_tests!($mod, $params, test_sign_verify,);
+            crate::tests::param_tests!($mod, $params, test_signature_size, test_sign_verify,);
         };
     }
 
     all_tests!(small, GravitySmall);
     all_tests!(medium, GravityMedium);
     all_tests!(large, GravityLarge);
+
+    fn test_signature_size<P: GravityParams>()
+    where
+        [(); P::MERKLE_H]:,
+    {
+        let expected_hashes = match P::config_type() {
+            ConfigType::S | ConfigType::M | ConfigType::L => 72,
+            ConfigType::Unknown => unimplemented!(),
+        };
+        assert_eq!(Signature::<P>::size_hashes(), expected_hashes);
+    }
 
     fn test_sign_verify<P: GravityParams>()
     where

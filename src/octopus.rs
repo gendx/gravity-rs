@@ -14,6 +14,20 @@ pub struct Octopus<P: GravityParams> {
 }
 
 impl<P: GravityParams> Octopus<P> {
+    #[cfg(test)]
+    pub fn min_size_hashes() -> usize {
+        // See https://eprint.iacr.org/2017/933, Theorem 1.
+        assert!(P::PORS_K != 0);
+        P::PORS_TAU - P::PORS_K.next_power_of_two().ilog2() as usize
+    }
+
+    #[cfg(test)]
+    pub fn max_size_hashes() -> usize {
+        // See https://eprint.iacr.org/2017/933, Theorem 1.
+        assert!(P::PORS_K != 0);
+        P::PORS_K * (P::PORS_TAU - P::PORS_K.ilog2() as usize)
+    }
+
     pub fn serialize(&self, output: &mut Vec<u8>) {
         for x in self.oct.iter() {
             x.serialize(output);
@@ -170,6 +184,7 @@ mod tests {
             crate::tests::param_tests!(
                 $mod,
                 $params,
+                test_octopus_size,
                 test_merkle_gen_octopus,
                 test_merkle_gen_compress_octopus,
             );
@@ -179,6 +194,23 @@ mod tests {
     all_tests!(small, GravitySmall);
     all_tests!(medium, GravityMedium);
     all_tests!(large, GravityLarge);
+
+    fn test_octopus_size<P: GravityParams>()
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
+        let (expected_min_hashes, expected_max_hashes) = match P::config_type() {
+            ConfigType::S => (11, 288),
+            ConfigType::M => (11, 352),
+            ConfigType::L => (11, 336),
+            ConfigType::Unknown => unimplemented!(),
+        };
+        assert_eq!(Octopus::<P>::min_size_hashes(), expected_min_hashes);
+        assert_eq!(Octopus::<P>::max_size_hashes(), expected_max_hashes);
+    }
 
     fn merkle_gen_octopus_leaves<P: GravityParams>(
         leaves: &[Hash],

@@ -97,6 +97,16 @@ where
         root.map(|h| (address, h))
     }
 
+    #[cfg(test)]
+    pub fn min_size_hashes() -> usize {
+        1 + P::PORS_K + octopus::Octopus::<P>::min_size_hashes()
+    }
+
+    #[cfg(test)]
+    pub fn max_size_hashes() -> usize {
+        1 + P::PORS_K + octopus::Octopus::<P>::max_size_hashes()
+    }
+
     pub fn serialize(&self, output: &mut Vec<u8>) {
         self.pepper.serialize(output);
         for x in self.values.iter() {
@@ -193,13 +203,27 @@ mod tests {
 
     macro_rules! all_tests {
         ( $mod:ident, $params:ty ) => {
-            crate::tests::param_tests!($mod, $params, test_sign_verify,);
+            crate::tests::param_tests!($mod, $params, test_signature_size, test_sign_verify,);
         };
     }
 
     all_tests!(small, GravitySmall);
     all_tests!(medium, GravityMedium);
     all_tests!(large, GravityLarge);
+
+    fn test_signature_size<P: GravityParams>()
+    where
+        [(); P::PORS_K]:,
+    {
+        let (expected_min_hashes, expected_max_hashes) = match P::config_type() {
+            ConfigType::S => (36, 313),
+            ConfigType::M => (44, 385),
+            ConfigType::L => (40, 365),
+            ConfigType::Unknown => unimplemented!(),
+        };
+        assert_eq!(Signature::<P>::min_size_hashes(), expected_min_hashes);
+        assert_eq!(Signature::<P>::max_size_hashes(), expected_max_hashes);
+    }
 
     fn test_sign_verify<P: GravityParams>()
     where
