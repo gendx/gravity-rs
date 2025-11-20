@@ -4,10 +4,6 @@ jobs:
   build:
     strategy:
       matrix:
-        rust:
-          - stable
-          - beta
-          - nightly
         arch:
           - i686
           - x86_64
@@ -24,9 +20,8 @@ jobs:
       RUSTFLAGS: "-C target-feature=${{ matrix.rust_features }} -D warnings"
     steps:
       - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
       - name: Build
         run: cargo build --target ${{ matrix.target }} --verbose

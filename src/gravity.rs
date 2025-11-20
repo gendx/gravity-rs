@@ -1,5 +1,5 @@
 use crate::address;
-use crate::config::*;
+use crate::config::{self, GravityParams};
 use crate::hash;
 use crate::hash::Hash;
 use crate::merkle;
@@ -7,23 +7,34 @@ use crate::pors;
 use crate::prng;
 use crate::subtree;
 use arrayref::array_ref;
+use std::array;
+use std::marker::PhantomData;
 
-pub struct SecKey {
+pub struct SecKey<P: GravityParams> {
     seed: Hash,
     salt: Hash,
     cache: merkle::MerkleTree,
-}
-pub struct PubKey {
-    pub h: Hash,
-}
-#[derive(Default)]
-pub struct Signature {
-    pors_sign: pors::Signature,
-    subtrees: [subtree::Signature; GRAVITY_D],
-    auth_c: [Hash; GRAVITY_C],
+    _phantom: PhantomData<P>,
 }
 
-impl SecKey {
+pub struct PubKey<P: GravityParams> {
+    h: Hash,
+    _phantom: PhantomData<P>,
+}
+
+pub struct Signature<P: GravityParams>
+where
+    [(); P::GRAVITY_D]:,
+    [(); P::GRAVITY_C]:,
+    [(); P::MERKLE_H]:,
+    [(); P::PORS_K]:,
+{
+    pors_sign: pors::Signature<P>,
+    subtrees: [subtree::Signature<P>; P::GRAVITY_D],
+    auth_c: [Hash; P::GRAVITY_C],
+}
+
+impl<P: GravityParams> SecKey<P> {
     pub fn new(random: &[u8; 64]) -> Self {
         let mut sk = SecKey {
             seed: Hash {
@@ -32,15 +43,16 @@ impl SecKey {
             salt: Hash {
                 h: *array_ref![random, 32, 32],
             },
-            cache: merkle::MerkleTree::new(GRAVITY_C),
+            cache: merkle::MerkleTree::new(P::GRAVITY_C),
+            _phantom: PhantomData,
         };
 
         let layer = 0u32;
         let prng = prng::Prng::new(&sk.seed);
-        let subtree_sk = subtree::SecKey::new(&prng);
+        let subtree_sk = subtree::SecKey::<'_, P>::new(&prng);
 
         for (i, leaf) in sk.cache.leaves().iter_mut().enumerate() {
-            let address = address::Address::new(layer, (i << MERKLE_H) as u64);
+            let address = address::Address::new(layer, (i << P::MERKLE_H) as u64);
             let pk = subtree_sk.genpk(&address);
             *leaf = pk.h;
         }
@@ -49,44 +61,76 @@ impl SecKey {
         sk
     }
 
-    pub fn genpk(&self) -> PubKey {
+    pub fn genpk(&self) -> PubKey<P> {
         PubKey {
             h: self.cache.root(),
+            _phantom: PhantomData,
         }
     }
 
-    pub fn sign_hash(&self, msg: &Hash) -> Signature {
-        let mut sign: Signature = Default::default();
-
+    pub fn sign_hash(&self, msg: &Hash) -> Signature<P>
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
         let prng = prng::Prng::new(&self.seed);
         let (mut address, mut h, pors_sign) = pors::sign(&prng, &self.salt, msg);
-        sign.pors_sign = pors_sign;
 
-        let subtree_sk = subtree::SecKey::new(&prng);
-        for i in 0..GRAVITY_D {
+        let subtree_sk = subtree::SecKey::<P>::new(&prng);
+        let subtrees = array::from_fn(|_| {
             address.next_layer();
             let (root, subtree_sign) = subtree_sk.sign(&address, &h);
             h = root;
-            sign.subtrees[i] = subtree_sign;
-            address.shift(MERKLE_H); // Update instance
-        }
+            address.shift(P::MERKLE_H); // Update instance
+            subtree_sign
+        });
 
         // For compatibility with 32-bit architectures, the index must fit in 32 bits here.
         let index: u64 = address.get_instance();
         debug_assert!(index <= u32::MAX as u64);
-        self.cache.gen_auth(&mut sign.auth_c, index as usize);
+        let mut auth_c = [Default::default(); P::GRAVITY_C];
+        self.cache.gen_auth(&mut auth_c, index as usize);
 
-        sign
+        Signature {
+            pors_sign,
+            subtrees,
+            auth_c,
+        }
     }
 
-    pub fn sign_bytes(&self, msg: &[u8]) -> Signature {
+    pub fn sign_bytes(&self, msg: &[u8]) -> Signature<P>
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
         let h = hash::long_hash(msg);
         self.sign_hash(&h)
     }
 }
 
-impl PubKey {
-    fn verify_hash(&self, sign: &Signature, msg: &Hash) -> bool {
+impl<P: GravityParams> PubKey<P> {
+    pub fn new(h: [u8; config::HASH_SIZE]) -> Self {
+        Self {
+            h: Hash { h },
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn get_bytes(&self) -> [u8; config::HASH_SIZE] {
+        self.h.h
+    }
+
+    fn verify_hash(&self, sign: &Signature<P>, msg: &Hash) -> bool
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
         if let Some(h) = sign.extract_hash(msg) {
             self.h == h
         } else {
@@ -94,25 +138,37 @@ impl PubKey {
         }
     }
 
-    pub fn verify_bytes(&self, sign: &Signature, msg: &[u8]) -> bool {
+    pub fn verify_bytes(&self, sign: &Signature<P>, msg: &[u8]) -> bool
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
         let h = hash::long_hash(msg);
         self.verify_hash(sign, &h)
     }
 }
 
-impl Signature {
+impl<P: GravityParams> Signature<P>
+where
+    [(); P::GRAVITY_D]:,
+    [(); P::GRAVITY_C]:,
+    [(); P::MERKLE_H]:,
+    [(); P::PORS_K]:,
+{
     fn extract_hash(&self, msg: &Hash) -> Option<Hash> {
         if let Some((mut address, mut h)) = self.pors_sign.extract(msg) {
-            for i in 0..GRAVITY_D {
+            for i in 0..P::GRAVITY_D {
                 address.next_layer();
                 h = self.subtrees[i].extract(&address, &h);
-                address.shift(MERKLE_H);
+                address.shift(P::MERKLE_H);
             }
 
             // For compatibility with 32-bit architectures, the index must fit in 32 bits here.
             let index: u64 = address.get_instance();
             debug_assert!(index <= u32::MAX as u64);
-            merkle::merkle_compress_auth(&mut h, &self.auth_c, GRAVITY_C, index as usize);
+            merkle::merkle_compress_auth(&mut h, &self.auth_c, P::GRAVITY_C, index as usize);
             Some(h)
         } else {
             None
@@ -133,39 +189,66 @@ impl Signature {
     where
         I: Iterator<Item = &'a u8>,
     {
-        let mut sign = Signature {
-            pors_sign: pors::Signature::deserialize(it)?,
-            ..Default::default()
-        };
-        for t in sign.subtrees.iter_mut() {
-            *t = subtree::Signature::deserialize(it)?;
-        }
-        for x in sign.auth_c.iter_mut() {
-            *x = Hash::deserialize(it)?;
-        }
-        Some(sign)
+        let pors_sign = pors::Signature::deserialize(it)?;
+        let subtrees = array::try_from_fn(|_| subtree::Signature::deserialize(it))?;
+        let auth_c = array::try_from_fn(|_| Hash::deserialize(it))?;
+
+        Some(Signature {
+            pors_sign,
+            subtrees,
+            auth_c,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::{ConfigType, GravityLarge, GravityMedium, GravitySmall};
 
-    #[test]
-    fn test_sign_verify() {
-        let random: [u8; 64] = std::array::from_fn(|i| i as u8);
+    macro_rules! all_tests {
+        ( $mod:ident, $params:ty ) => {
+            crate::tests::param_tests!(
+                $mod,
+                $params,
+                test_sign_verify,
+                test_genkey_zeros,
+                test_sign_zeros,
+                test_genkey_kat,
+                test_sign_kat,
+            );
+        };
+    }
 
-        let sk = SecKey::new(&random);
+    all_tests!(small, GravitySmall);
+    all_tests!(medium, GravityMedium);
+    all_tests!(large, GravityLarge);
+
+    fn test_sign_verify<P: GravityParams>()
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
+        let random: [u8; 64] = array::from_fn(|i| i as u8);
+
+        let sk = SecKey::<P>::new(&random);
         let pk = sk.genpk();
         let msg = hash::tests::HASH_ELEMENT;
         let sign = sk.sign_hash(&msg);
         assert!(pk.verify_hash(&sign, &msg));
     }
 
-    #[test]
-    fn test_genkey_zeros() {
+    fn test_genkey_zeros<P: GravityParams>()
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
         let random: [u8; 64] = [0u8; 64];
-        let pkh: [u8; 32] = match get_config_type() {
+        let pkh: [u8; 32] = match P::config_type() {
             ConfigType::S => {
                 *b"\x57\x03\x58\x87\x1a\x7a\x2c\xfe\
                    \x1e\xab\xf1\x3b\x4c\x11\x3a\x81\
@@ -187,13 +270,18 @@ mod tests {
             ConfigType::Unknown => unimplemented!(),
         };
 
-        let sk = SecKey::new(&random);
+        let sk = SecKey::<P>::new(&random);
         let pk = sk.genpk();
         assert_eq!(pk.h.h, pkh);
     }
 
-    #[test]
-    fn test_sign_zeros() {
+    fn test_sign_zeros<P: GravityParams>()
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
         use hex;
 
         let random: [u8; 64] = [0u8; 64];
@@ -201,7 +289,7 @@ mod tests {
                                \x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\
                                \x10\x11\x12\x13\x14\x15\x16\x17\
                                \x18\x19\x1a\x1b\x1c\x1d\x1e\x1f";
-        let hex_file = match get_config_type() {
+        let hex_file = match P::config_type() {
             ConfigType::S => {
                 let hex_file = include_str!("../test_files/test_sign_zero_S.hex");
                 hex_file
@@ -223,15 +311,20 @@ mod tests {
         }
         let expect: Vec<u8> = hex::decode(hex).unwrap();
 
-        let sk = SecKey::new(&random);
+        let sk = SecKey::<P>::new(&random);
         let sign = sk.sign_bytes(&msg);
         let mut sign_bytes = Vec::<u8>::new();
         sign.serialize(&mut sign_bytes);
         assert_eq!(sign_bytes, expect);
     }
 
-    #[test]
-    fn test_genkey_kat() {
+    fn test_genkey_kat<P: GravityParams>()
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
         let random: [u8; 64] = *b"\x7C\x99\x35\xA0\xB0\x76\x94\xAA\
                                   \x0C\x6D\x10\xE4\xDB\x6B\x1A\xDD\
                                   \x2F\xD8\x1A\x25\xCC\xB1\x48\x03\
@@ -240,7 +333,7 @@ mod tests {
                                   \x00\xE0\x3B\x59\xB9\x56\xF8\x21\
                                   \x0E\x55\x60\x67\x40\x7D\x13\xDC\
                                   \x90\xFA\x9E\x8B\x87\x2B\xFB\x8F";
-        let pkh: [u8; 32] = match get_config_type() {
+        let pkh: [u8; 32] = match P::config_type() {
             ConfigType::S => {
                 *b"\xDB\x9E\xBB\x0D\xB2\xB1\xD2\x31\
                    \x9E\xFB\x26\xCD\xA6\x5C\x0F\x50\
@@ -262,13 +355,18 @@ mod tests {
             ConfigType::Unknown => unimplemented!(),
         };
 
-        let sk = SecKey::new(&random);
+        let sk = SecKey::<P>::new(&random);
         let pk = sk.genpk();
         assert_eq!(pk.h.h, pkh);
     }
 
-    #[test]
-    fn test_sign_kat() {
+    fn test_sign_kat<P: GravityParams>()
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
         use hex;
 
         let random: [u8; 64] = *b"\x7C\x99\x35\xA0\xB0\x76\x94\xAA\
@@ -281,7 +379,7 @@ mod tests {
                                   \x90\xFA\x9E\x8B\x87\x2B\xFB\x8F";
         let msg = hex::decode("D81C4D8D734FCBFBEADE3D3F8A039FAA2A2C9957E835AD55B22E75BF57BB556AC8")
             .unwrap();
-        let hex_file = match get_config_type() {
+        let hex_file = match P::config_type() {
             ConfigType::S => include_str!("../test_files/test_sign_kat_S.hex"),
             ConfigType::M => include_str!("../test_files/test_sign_kat_M.hex"),
             ConfigType::L => include_str!("../test_files/test_sign_kat_L.hex"),
@@ -294,7 +392,7 @@ mod tests {
         }
         let expect: Vec<u8> = hex::decode(hex).unwrap();
 
-        let sk = SecKey::new(&random);
+        let sk = SecKey::<P>::new(&random);
         let sign = sk.sign_bytes(&msg);
         let mut sign_bytes = Vec::<u8>::new();
         sign.serialize(&mut sign_bytes);
@@ -302,31 +400,63 @@ mod tests {
         assert_eq!(sign_bytes, expect);
     }
 
+    macro_rules! all_benches {
+        ( $mod:ident, $params:ty ) => {
+            crate::tests::param_benches!(
+                $mod,
+                $params,
+                #[cfg(feature = "bigbench")]
+                bench_keypair,
+                bench_sign,
+                bench_verify,
+            );
+        };
+    }
+
+    all_benches!(benches_small, GravitySmall);
+    all_benches!(benches_medium, GravityMedium);
+    all_benches!(benches_large, GravityLarge);
+
     use std::hint::black_box;
     use test::Bencher;
 
     #[cfg(feature = "bigbench")]
-    #[bench]
-    fn bench_keypair(b: &mut Bencher) {
+    fn bench_keypair<P: GravityParams>(b: &mut Bencher)
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
         let seed = [0u8; 64];
         b.iter(|| {
-            let sk = SecKey::new(black_box(&seed));
+            let sk = SecKey::<P>::new(black_box(&seed));
             sk.genpk()
         });
     }
 
-    #[bench]
-    fn bench_sign(b: &mut Bencher) {
+    fn bench_sign<P: GravityParams>(b: &mut Bencher)
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
         let seed = [0u8; 64];
-        let sk = SecKey::new(&seed);
+        let sk = SecKey::<P>::new(&seed);
         let msg = hash::tests::HASH_ELEMENT;
         b.iter(|| sk.sign_hash(black_box(&msg)));
     }
 
-    #[bench]
-    fn bench_verify(b: &mut Bencher) {
+    fn bench_verify<P: GravityParams>(b: &mut Bencher)
+    where
+        [(); P::GRAVITY_D]:,
+        [(); P::GRAVITY_C]:,
+        [(); P::MERKLE_H]:,
+        [(); P::PORS_K]:,
+    {
         let seed = [0u8; 64];
-        let sk = SecKey::new(&seed);
+        let sk = SecKey::<P>::new(&seed);
         let pk = sk.genpk();
         let msg = hash::tests::HASH_ELEMENT;
         let sign = sk.sign_hash(&msg);

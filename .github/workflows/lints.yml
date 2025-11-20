@@ -21,3 +21,8 @@ jobs:
         run: cargo clippy --target ${{ matrix.target }} --verbose
       - name: Check Clippy lints on tests
         run: cargo clippy --target ${{ matrix.target }} --verbose --tests
+
+      - name: Check Clippy lints (all features)
+        run: cargo clippy --target ${{ matrix.target }} --verbose --all-features
+      - name: Check Clippy lints on tests (all features)
+        run: cargo clippy --target ${{ matrix.target }} --verbose --tests --all-features

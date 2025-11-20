@@ -384,7 +384,35 @@ mod tests {
         }
     }
 
-    use super::super::config;
+    macro_rules! all_benches {
+        ( $mod:ident, $params:ty ) => {
+            crate::tests::param_benches!(
+                $mod,
+                $params,
+                bench_merkle_compress_all_subtree,
+                bench_merkle_gen_auth_subtree_first,
+                bench_merkle_gen_auth_subtree_last,
+                bench_merkle_gen_auth_subtree_middle,
+                bench_merkle_compress_auth_subtree_first,
+                bench_merkle_compress_auth_subtree_last,
+                bench_merkle_compress_auth_subtree_middle,
+                bench_merkle_compress_all_pors,
+                bench_merkle_gen_auth_pors_first,
+                bench_merkle_gen_auth_pors_last,
+                bench_merkle_gen_auth_pors_middle,
+                bench_merkle_compress_auth_pors_first,
+                bench_merkle_compress_auth_pors_last,
+                bench_merkle_compress_auth_pors_middle,
+            );
+        };
+    }
+
+    use crate::config::{GravityLarge, GravityMedium, GravityParams, GravitySmall};
+
+    all_benches!(benches_small, GravitySmall);
+    all_benches!(benches_medium, GravityMedium);
+    all_benches!(benches_large, GravityLarge);
+
     use std::hint::black_box;
     use test::Bencher;
 
@@ -456,74 +484,60 @@ mod tests {
     }
 
     // SPHINCS subtree
-    #[bench]
-    fn bench_merkle_compress_all_subtree(b: &mut Bencher) {
-        bench_merkle_compress_all(b, config::MERKLE_H);
+    fn bench_merkle_compress_all_subtree<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_compress_all(b, P::MERKLE_H);
     }
 
-    #[bench]
-    fn bench_merkle_gen_auth_subtree_first(b: &mut Bencher) {
-        bench_merkle_gen_auth_first(b, config::MERKLE_H);
+    fn bench_merkle_gen_auth_subtree_first<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_gen_auth_first(b, P::MERKLE_H);
     }
 
-    #[bench]
-    fn bench_merkle_gen_auth_subtree_last(b: &mut Bencher) {
-        bench_merkle_gen_auth_last(b, config::MERKLE_H);
+    fn bench_merkle_gen_auth_subtree_last<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_gen_auth_last(b, P::MERKLE_H);
     }
 
-    #[bench]
-    fn bench_merkle_gen_auth_subtree_middle(b: &mut Bencher) {
-        bench_merkle_gen_auth_middle(b, config::MERKLE_H);
+    fn bench_merkle_gen_auth_subtree_middle<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_gen_auth_middle(b, P::MERKLE_H);
     }
 
-    #[bench]
-    fn bench_merkle_compress_auth_subtree_first(b: &mut Bencher) {
-        bench_merkle_compress_auth_first(b, config::MERKLE_H);
+    fn bench_merkle_compress_auth_subtree_first<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_compress_auth_first(b, P::MERKLE_H);
     }
 
-    #[bench]
-    fn bench_merkle_compress_auth_subtree_last(b: &mut Bencher) {
-        bench_merkle_compress_auth_last(b, config::MERKLE_H);
+    fn bench_merkle_compress_auth_subtree_last<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_compress_auth_last(b, P::MERKLE_H);
     }
 
-    #[bench]
-    fn bench_merkle_compress_auth_subtree_middle(b: &mut Bencher) {
-        bench_merkle_compress_auth_middle(b, config::MERKLE_H);
+    fn bench_merkle_compress_auth_subtree_middle<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_compress_auth_middle(b, P::MERKLE_H);
     }
 
     // PORS tree
-    #[bench]
-    fn bench_merkle_compress_all_pors(b: &mut Bencher) {
-        bench_merkle_compress_all(b, config::PORS_TAU);
+    fn bench_merkle_compress_all_pors<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_compress_all(b, P::PORS_TAU);
     }
 
-    #[bench]
-    fn bench_merkle_gen_auth_pors_first(b: &mut Bencher) {
-        bench_merkle_gen_auth_first(b, config::PORS_TAU);
+    fn bench_merkle_gen_auth_pors_first<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_gen_auth_first(b, P::PORS_TAU);
     }
 
-    #[bench]
-    fn bench_merkle_gen_auth_pors_last(b: &mut Bencher) {
-        bench_merkle_gen_auth_last(b, config::PORS_TAU);
+    fn bench_merkle_gen_auth_pors_last<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_gen_auth_last(b, P::PORS_TAU);
     }
 
-    #[bench]
-    fn bench_merkle_gen_auth_pors_middle(b: &mut Bencher) {
-        bench_merkle_gen_auth_middle(b, config::PORS_TAU);
+    fn bench_merkle_gen_auth_pors_middle<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_gen_auth_middle(b, P::PORS_TAU);
     }
 
-    #[bench]
-    fn bench_merkle_compress_auth_pors_first(b: &mut Bencher) {
-        bench_merkle_compress_auth_first(b, config::PORS_TAU);
+    fn bench_merkle_compress_auth_pors_first<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_compress_auth_first(b, P::PORS_TAU);
     }
 
-    #[bench]
-    fn bench_merkle_compress_auth_pors_last(b: &mut Bencher) {
-        bench_merkle_compress_auth_last(b, config::PORS_TAU);
+    fn bench_merkle_compress_auth_pors_last<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_compress_auth_last(b, P::PORS_TAU);
     }
 
-    #[bench]
-    fn bench_merkle_compress_auth_pors_middle(b: &mut Bencher) {
-        bench_merkle_compress_auth_middle(b, config::PORS_TAU);
+    fn bench_merkle_compress_auth_pors_middle<P: GravityParams>(b: &mut Bencher) {
+        bench_merkle_compress_auth_middle(b, P::PORS_TAU);
     }
 }

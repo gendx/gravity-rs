@@ -114,7 +114,18 @@ mod tests {
         assert_eq!(dst[2].h, *array_ref![expect, 64, 32]);
     }
 
-    use super::super::config;
+    macro_rules! all_benches {
+        ( $mod:ident, $params:ty ) => {
+            crate::tests::param_benches!($mod, $params, bench_genblocks_pors,);
+        };
+    }
+
+    use crate::config::{self, GravityLarge, GravityMedium, GravityParams, GravitySmall};
+
+    all_benches!(benches_small, GravitySmall);
+    all_benches!(benches_medium, GravityMedium);
+    all_benches!(benches_large, GravityLarge);
+
     use test::Bencher;
 
     #[bench]
@@ -147,11 +158,10 @@ mod tests {
         });
     }
 
-    #[bench]
-    fn bench_genblocks_pors(b: &mut Bencher) {
+    fn bench_genblocks_pors<P: GravityParams>(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
         b.iter(|| {
-            let mut dst = vec![Default::default(); config::PORS_T];
+            let mut dst = vec![Default::default(); P::PORS_T];
             prng.genblocks(&mut dst, &address::Address::new(0, 0));
             dst
         });
