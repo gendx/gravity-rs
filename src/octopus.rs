@@ -16,7 +16,17 @@ impl<P: GravityParams> Octopus<P> {
     pub fn min_size_hashes() -> usize {
         // See https://eprint.iacr.org/2017/933, Theorem 1.
         assert!(P::PORS_K != 0);
-        P::PORS_TAU - P::PORS_K.next_power_of_two().ilog2() as usize
+        let min = P::PORS_TAU - P::PORS_K.next_power_of_two().ilog2() as usize;
+        if let Some(limit) = P::OCTOPUS_LIMIT {
+            assert!(min <= limit);
+        }
+        min
+    }
+
+    #[cfg(test)]
+    pub fn limited_size_hashes() -> usize {
+        let max = Self::max_size_hashes();
+        P::OCTOPUS_LIMIT.map_or(max, |limit| limit.min(max))
     }
 
     #[cfg(test)]
@@ -27,13 +37,16 @@ impl<P: GravityParams> Octopus<P> {
     }
 
     pub fn serialize(&self, output: &mut Vec<u8>) {
+        let limit = P::OCTOPUS_LIMIT.unwrap_or(P::PORS_K * P::PORS_TAU);
+
         for x in self.oct.iter() {
             x.serialize(output);
         }
         // TODO: improve this!
         let empty = Hash { h: [0; HASH_SIZE] };
         let count = self.oct.len();
-        for _ in count..(P::PORS_K * P::PORS_TAU) {
+        assert!(count <= limit);
+        for _ in count..limit {
             empty.serialize(output);
         }
 
@@ -46,8 +59,10 @@ impl<P: GravityParams> Octopus<P> {
     where
         I: Iterator<Item = &'a u8>,
     {
+        let limit = P::OCTOPUS_LIMIT.unwrap_or(P::PORS_K * P::PORS_TAU);
+
         let mut oct = Vec::new();
-        for _ in 0..(P::PORS_K * P::PORS_TAU) {
+        for _ in 0..limit {
             oct.push(Hash::deserialize(it)?);
         }
 
@@ -63,7 +78,7 @@ impl<P: GravityParams> Octopus<P> {
             }
         }
 
-        if count > P::PORS_K * P::PORS_TAU {
+        if count > limit {
             return None;
         }
         let empty = Hash { h: [0; HASH_SIZE] };
@@ -78,6 +93,38 @@ impl<P: GravityParams> Octopus<P> {
             _phantom: PhantomData,
         })
     }
+}
+
+pub fn octopus_size_hashes<P: GravityParams>(
+    height: usize,
+    mut indices: [usize; P::PORS_K],
+) -> usize {
+    let mut count = indices.len();
+
+    let mut count_hashes = 0;
+    for _ in 0..height {
+        let mut i = 0;
+        let mut j = 0;
+        while i < count {
+            let index = indices[i];
+            let sibling = index ^ 1;
+
+            // Check redundancy with sibling
+            if i + 1 < count && indices[i + 1] == sibling {
+                i += 1;
+            } else {
+                count_hashes += 1;
+            }
+
+            indices[j] = indices[i] >> 1;
+
+            i += 1;
+            j += 1;
+        }
+        count = j;
+    }
+
+    count_hashes
 }
 
 pub fn merkle_gen_octopus<P: GravityParams>(
@@ -227,12 +274,40 @@ mod tests {
         const C: usize = 0;
     }
 
+    #[derive(Debug, PartialEq)]
+    struct Octopus1316;
+
+    impl GravityParams for Octopus1316 {
+        #[cfg(test)]
+        fn config_type() -> ConfigType {
+            ConfigType::Unknown
+        }
+
+        fn check_params() {
+            // TODO: Move this implementation to the trait when supported.
+            const {
+                assert!(Self::PORS_K > 0);
+                assert!(Self::PORS_K <= Self::PORS_T);
+            };
+        }
+
+        const TAU: usize = 13;
+        const K: usize = 16;
+        // Irrelevant here.
+        const H: usize = 0;
+        const D: usize = 0;
+        const C: usize = 0;
+
+        const OCTOPUS_LIMIT: Option<usize> = Some(107);
+    }
+
     macro_rules! all_tests {
         ( $mod:ident, $params:ty ) => {
             crate::tests::param_tests!($mod, $params, test_octopus_size,);
         };
     }
 
+    all_tests!(pors1316, Octopus1316);
     all_tests!(small, GravitySmall);
     all_tests!(medium, GravityMedium);
     all_tests!(large, GravityLarge);
@@ -244,14 +319,20 @@ mod tests {
         [(); P::MERKLE_H]:,
         [(); P::PORS_K]:,
     {
-        let (expected_min_hashes, expected_max_hashes) = match P::config_type() {
-            ConfigType::S => (11, 288),
-            ConfigType::M => (11, 352),
-            ConfigType::L => (11, 336),
-            ConfigType::Unknown => unimplemented!(),
+        let expected = match P::config_type() {
+            ConfigType::S => (11, 230, 288),
+            ConfigType::M => (11, 290, 352),
+            ConfigType::L => (11, 260, 336),
+            ConfigType::Unknown => (9, 107, 144),
         };
-        assert_eq!(Octopus::<P>::min_size_hashes(), expected_min_hashes);
-        assert_eq!(Octopus::<P>::max_size_hashes(), expected_max_hashes);
+        assert_eq!(
+            (
+                Octopus::<P>::min_size_hashes(),
+                Octopus::<P>::limited_size_hashes(),
+                Octopus::<P>::max_size_hashes()
+            ),
+            expected
+        );
     }
 
     pub fn merkle_gen_octopus_leaves<P: GravityParams>(
@@ -292,6 +373,10 @@ mod tests {
         let src = [h0, h1, h2, h3, h4, h5, h6, h7];
         let (root, octopus) = merkle_gen_octopus_leaves::<Octopus84>(&src, 3, [0, 2, 3, 6]);
         assert_eq!(
+            octopus.oct.len(),
+            octopus_size_hashes::<Octopus84>(3, [0, 2, 3, 6])
+        );
+        assert_eq!(
             octopus,
             Octopus {
                 oct: vec![h1, h7, h10],
@@ -319,6 +404,10 @@ mod tests {
                 for k in (j + 1)..8 {
                     let (root, octopus) =
                         merkle_gen_octopus_leaves::<Octopus83>(&src, 3, [i, j, k]);
+                    assert_eq!(
+                        octopus.oct.len(),
+                        octopus_size_hashes::<Octopus83>(3, [i, j, k])
+                    );
 
                     let mut nodes = [src[i], src[j], src[k]];
                     let compressed = merkle_compress_octopus(&mut nodes, &octopus, 3, [i, j, k]);

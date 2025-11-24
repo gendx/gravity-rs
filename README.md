@@ -1,11 +1,11 @@
 # gravity-rs
 
 [![Minimum Rust 1.85.0](https://img.shields.io/badge/rust-1.85.0%2B-orange.svg?logo=rust)](https://releases.rs/docs/1.85.0/)
-[![Lines of Code](https://www.aschey.tech/tokei/github/gendx/gravity-rs?category=code&branch=master)](https://github.com/gendx/gravity-rs)
+[![Lines of Code](https://www.aschey.tech/tokei/github/gendx/gravity-rs?category=code&branch=forced-pruning)](https://github.com/gendx/gravity-rs)
 [![Dependencies](https://deps.rs/repo/github/gendx/gravity-rs/status.svg)](https://deps.rs/repo/github/gendx/gravity-rs)
-[![Codecov](https://codecov.io/gh/gendx/gravity-rs/branch/master/graph/badge.svg)](https://app.codecov.io/gh/gendx/gravity-rs/tree/master)
-[![Build Status](https://github.com/gendx/gravity-rs/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/gendx/gravity-rs/actions/workflows/build.yml)
-[![Test Status](https://github.com/gendx/gravity-rs/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/gendx/gravity-rs/actions/workflows/tests.yml)
+[![Codecov](https://codecov.io/gh/gendx/gravity-rs/branch/forced-pruning/graph/badge.svg)](https://app.codecov.io/gh/gendx/gravity-rs/tree/forced-pruning)
+[![Build Status](https://github.com/gendx/gravity-rs/actions/workflows/build.yml/badge.svg?branch=forced-pruning)](https://github.com/gendx/gravity-rs/actions/workflows/build.yml)
+[![Test Status](https://github.com/gendx/gravity-rs/actions/workflows/tests.yml/badge.svg?branch=forced-pruning)](https://github.com/gendx/gravity-rs/actions/workflows/tests.yml)
 
 A Rust implementation of the [Gravity-post-quantum](https://github.com/gravity-postquantum) signature schemes.
 

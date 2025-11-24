@@ -19,6 +19,15 @@ impl fmt::Debug for Hash {
 }
 
 impl Hash {
+    pub fn increment(&mut self) {
+        for x in &mut self.h {
+            *x = x.wrapping_add(1);
+            if *x != 0 {
+                break;
+            }
+        }
+    }
+
     pub fn serialize(&self, output: &mut Vec<u8>) {
         output.extend(self.h.iter());
     }

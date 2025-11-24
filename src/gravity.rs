@@ -178,20 +178,32 @@ where
     }
 
     #[cfg(test)]
+    pub fn limited_size_bytes() -> usize {
+        Self::limited_size_hashes() * config::HASH_SIZE
+    }
+
+    #[cfg(test)]
     pub fn max_size_bytes() -> usize {
         Self::max_size_hashes() * config::HASH_SIZE
     }
 
     #[cfg(test)]
-    pub fn max_size_hashes() -> usize {
-        pors::Signature::<P>::max_size_hashes()
+    pub fn min_size_hashes() -> usize {
+        pors::Signature::<P>::min_size_hashes()
             + subtree::Signature::<P>::size_hashes() * P::GRAVITY_D
             + P::GRAVITY_C
     }
 
     #[cfg(test)]
-    pub fn min_size_hashes() -> usize {
-        pors::Signature::<P>::min_size_hashes()
+    pub fn limited_size_hashes() -> usize {
+        pors::Signature::<P>::limited_size_hashes()
+            + subtree::Signature::<P>::size_hashes() * P::GRAVITY_D
+            + P::GRAVITY_C
+    }
+
+    #[cfg(test)]
+    pub fn max_size_hashes() -> usize {
+        pors::Signature::<P>::max_size_hashes()
             + subtree::Signature::<P>::size_hashes() * P::GRAVITY_D
             + P::GRAVITY_C
     }
@@ -257,23 +269,35 @@ mod tests {
         [(); P::MERKLE_H]:,
         [(); P::PORS_K]:,
     {
-        let (expected_min_hashes, expected_max_hashes) = match P::config_type() {
-            ConfigType::S => (118, 395),
-            ConfigType::M => (563, 904),
-            ConfigType::L => (774, 1099),
+        let expected_hashes = match P::config_type() {
+            ConfigType::S => (118, 337, 395),
+            ConfigType::M => (563, 842, 904),
+            ConfigType::L => (774, 1023, 1099),
             ConfigType::Unknown => unimplemented!(),
         };
-        assert_eq!(Signature::<P>::min_size_hashes(), expected_min_hashes);
-        assert_eq!(Signature::<P>::max_size_hashes(), expected_max_hashes);
+        assert_eq!(
+            (
+                Signature::<P>::min_size_hashes(),
+                Signature::<P>::limited_size_hashes(),
+                Signature::<P>::max_size_hashes()
+            ),
+            expected_hashes
+        );
 
-        let (expected_min_bytes, expected_max_bytes) = match P::config_type() {
-            ConfigType::S => (3776, 12640),
-            ConfigType::M => (18016, 28928),
-            ConfigType::L => (24768, 35168),
+        let expected_bytes = match P::config_type() {
+            ConfigType::S => (3776, 10784, 12640),
+            ConfigType::M => (18016, 26944, 28928),
+            ConfigType::L => (24768, 32736, 35168),
             ConfigType::Unknown => unimplemented!(),
         };
-        assert_eq!(Signature::<P>::min_size_bytes(), expected_min_bytes);
-        assert_eq!(Signature::<P>::max_size_bytes(), expected_max_bytes);
+        assert_eq!(
+            (
+                Signature::<P>::min_size_bytes(),
+                Signature::<P>::limited_size_bytes(),
+                Signature::<P>::max_size_bytes()
+            ),
+            expected_bytes
+        );
     }
 
     fn test_sign_verify<P: GravityParams>()

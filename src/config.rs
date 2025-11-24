@@ -13,6 +13,9 @@ pub trait GravityParams: Debug + PartialEq {
     const D: usize;
     const C: usize;
 
+    /// Maximum number of authentication hashes per octopus.
+    const OCTOPUS_LIMIT: Option<usize> = None;
+
     /* Don't modify */
     const PORS_TAU: usize = Self::TAU;
     const PORS_T: usize = 1 << Self::PORS_TAU;
@@ -53,6 +56,8 @@ impl GravityParams for GravitySmall {
     const H: usize = 5;
     const D: usize = 1;
     const C: usize = 10;
+
+    const OCTOPUS_LIMIT: Option<usize> = Some(230);
 }
 
 #[derive(Debug, PartialEq)]
@@ -78,6 +83,8 @@ impl GravityParams for GravityMedium {
     const H: usize = 5;
     const D: usize = 7;
     const C: usize = 15;
+
+    const OCTOPUS_LIMIT: Option<usize> = Some(290);
 }
 
 #[derive(Debug, PartialEq)]
@@ -103,6 +110,8 @@ impl GravityParams for GravityLarge {
     const H: usize = 5;
     const D: usize = 10;
     const C: usize = 14;
+
+    const OCTOPUS_LIMIT: Option<usize> = Some(260);
 }
 
 /* Don't modify */
