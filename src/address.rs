@@ -1,5 +1,4 @@
 use arrayref::array_mut_ref;
-use byteorder::{BigEndian, ByteOrder};
 use std::fmt;
 
 #[derive(PartialEq, Eq)]
@@ -50,9 +49,9 @@ impl Address {
 
     pub fn to_block(&self, counter: u32) -> [u8; 16] {
         let mut block = [0; 16];
-        BigEndian::write_u64(array_mut_ref![block, 0, 8], self.instance);
-        BigEndian::write_u32(array_mut_ref![block, 8, 4], self.layer);
-        BigEndian::write_u32(array_mut_ref![block, 12, 4], counter);
+        *array_mut_ref![block, 0, 8] = self.instance.to_be_bytes();
+        *array_mut_ref![block, 8, 4] = self.layer.to_be_bytes();
+        *array_mut_ref![block, 12, 4] = counter.to_be_bytes();
         block
     }
 }

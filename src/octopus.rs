@@ -3,7 +3,6 @@ use crate::hash;
 use crate::hash::Hash;
 use crate::merkle;
 use arrayref::array_mut_ref;
-use byteorder::{ByteOrder, LittleEndian};
 use std::marker::PhantomData;
 use std::mem;
 
@@ -40,7 +39,7 @@ impl<P: GravityParams> Octopus<P> {
         }
 
         let mut block = [0u8; 16];
-        LittleEndian::write_u32(array_mut_ref![&mut block, 0, 4], count as u32);
+        *array_mut_ref![&mut block, 0, 4] = (count as u32).to_le_bytes();
         output.extend(block.iter());
     }
 
@@ -57,7 +56,7 @@ impl<P: GravityParams> Octopus<P> {
         for x in block.iter_mut() {
             *x = *it.next()?;
         }
-        let count = LittleEndian::read_u32(&block) as usize;
+        let count = u32::from_le_bytes(block) as usize;
 
         for _ in 0..12 {
             if *it.next()? != 0 {
@@ -347,7 +346,6 @@ mod tests {
 
     use super::super::{address, prng};
     use arrayref::array_ref;
-    use byteorder::{BigEndian, ByteOrder};
     use std::hint::black_box;
     use test::Bencher;
 
@@ -420,7 +418,7 @@ mod tests {
         'outer: while count < P::PORS_K {
             prng.genblock(&mut block, &address, counter);
             'inner: for i in 0..8 {
-                let x = BigEndian::read_u32(array_ref![block.h, 4 * i, 4]) as usize;
+                let x = u32::from_be_bytes(*array_ref![block.h, 4 * i, 4]) as usize;
                 let x = x % P::PORS_T;
 
                 if subset[..count].contains(&x) {

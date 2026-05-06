@@ -6,7 +6,6 @@ use crate::merkle;
 use crate::octopus;
 use crate::prng;
 use arrayref::array_ref;
-use byteorder::{BigEndian, ByteOrder};
 use std::array;
 use std::marker::PhantomData;
 
@@ -164,7 +163,7 @@ fn obtain_address_subset<P: GravityParams>(
 
     let mut block = Default::default();
     prng.genblock(&mut block, &address, 0);
-    let instance: u64 = BigEndian::read_u64(array_ref![block.h, 24, 8]);
+    let instance = u64::from_be_bytes(*array_ref![block.h, 24, 8]);
     let instance = instance & P::GRAVITY_MASK;
 
     let mut subset: [usize; P::PORS_K] = [0; P::PORS_K];
@@ -174,7 +173,7 @@ fn obtain_address_subset<P: GravityParams>(
     'outer: while count < P::PORS_K {
         prng.genblock(&mut block, &address, counter);
         'inner: for i in 0..8 {
-            let x = BigEndian::read_u32(array_ref![block.h, 4 * i, 4]) as usize;
+            let x = u32::from_be_bytes(*array_ref![block.h, 4 * i, 4]) as usize;
             let x = x % P::PORS_T;
 
             for i in 0..count {
