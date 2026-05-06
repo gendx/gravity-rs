@@ -6,7 +6,7 @@ jobs:
     env:
       RUSTFLAGS: "-C target-cpu=native -D warnings"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - name: Tests
         run: cargo test --release

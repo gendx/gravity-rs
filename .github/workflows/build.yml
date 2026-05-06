@@ -19,7 +19,7 @@ jobs:
     env:
       RUSTFLAGS: "-C target-feature=${{ matrix.rust_features }} -D warnings"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
         with:
           target: ${{ matrix.target }}
