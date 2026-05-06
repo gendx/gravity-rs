@@ -363,6 +363,7 @@ mod tests {
     use std::hint::black_box;
     use test::Bencher;
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_expand256(b: &mut Bencher) {
         let key = b"\x00\x01\x02\x03\x04\x05\x06\x07\
@@ -376,6 +377,7 @@ mod tests {
         });
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_aes256_rkeys_xmm(b: &mut Bencher) {
         let src = b"\x00\x01\x02\x03\x04\x05\x06\x07\
@@ -394,6 +396,7 @@ mod tests {
         });
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_aes256(b: &mut Bencher) {
         let src = b"\x00\x01\x02\x03\x04\x05\x06\x07\

@@ -246,7 +246,9 @@ mod tests {
     }
 
     all_tests!(small, GravitySmall);
+    #[cfg(not(coverage))]
     all_tests!(medium, GravityMedium);
+    #[cfg(not(coverage))]
     all_tests!(large, GravityLarge);
 
     fn test_signature_size<P: GravityParams>()

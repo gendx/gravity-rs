@@ -349,6 +349,7 @@ mod tests {
     use std::hint::black_box;
     use test::Bencher;
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_merkle_gen_octopus_8_4(b: &mut Bencher) {
         const HEIGHT: usize = 3;
@@ -357,6 +358,7 @@ mod tests {
         b.iter(|| merkle_gen_octopus_leaves::<Octopus84>(black_box(&src), HEIGHT, indices));
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_merkle_compress_octopus_8_3(b: &mut Bencher) {
         const HEIGHT: usize = 3;

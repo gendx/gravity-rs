@@ -128,6 +128,7 @@ mod tests {
 
     use test::Bencher;
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_genblock(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
@@ -138,6 +139,7 @@ mod tests {
         });
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_genblocks_5(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
@@ -148,6 +150,7 @@ mod tests {
         });
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_genblocks_20(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
@@ -167,6 +170,7 @@ mod tests {
         });
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_genblocks_wots(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);

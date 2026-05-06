@@ -96,6 +96,7 @@ pub mod tests {
 
                 $(
                     $( #[$attrs] )*
+                    #[cfg(not(coverage))]
                     #[bench]
                     fn $case(b: &mut Bencher) {
                         super::$case::<$params>(b)
@@ -114,7 +115,9 @@ pub mod tests {
     }
 
     all_tests!(small, GravitySmall);
+    #[cfg(not(coverage))]
     all_tests!(medium, GravityMedium);
+    #[cfg(not(coverage))]
     all_tests!(large, GravityLarge);
 
     fn test_sign_verify<P: GravityParams>()

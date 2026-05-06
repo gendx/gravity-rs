@@ -240,18 +240,21 @@ pub mod tests {
     use std::hint::black_box;
     use test::Bencher;
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_chain_1(b: &mut Bencher) {
         let src = HASH_ELEMENT;
         b.iter(|| hash_n_to_n_chain_ret(black_box(&src), 1));
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_chain_5(b: &mut Bencher) {
         let src = HASH_ELEMENT;
         b.iter(|| hash_n_to_n_chain_ret(black_box(&src), 5));
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_parallel_5(b: &mut Bencher) {
         let src = [HASH_ELEMENT; 5];
@@ -262,6 +265,7 @@ pub mod tests {
         });
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_parallel_chains_5x5(b: &mut Bencher) {
         let src = [HASH_ELEMENT; 5];
@@ -272,6 +276,7 @@ pub mod tests {
         });
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_parallel_columns_5x5(b: &mut Bencher) {
         let src = [HASH_ELEMENT; 5];
@@ -284,6 +289,7 @@ pub mod tests {
         });
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_parallel_rows_5x5(b: &mut Bencher) {
         let src = [HASH_ELEMENT; 5];
@@ -297,6 +303,7 @@ pub mod tests {
         });
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_parallel_mix_5(b: &mut Bencher) {
         let h0 = HASH_ELEMENT;

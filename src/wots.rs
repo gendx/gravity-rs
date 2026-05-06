@@ -181,6 +181,7 @@ mod tests {
     use std::hint::black_box;
     use test::Bencher;
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_keypair(b: &mut Bencher) {
         let seed = hash::tests::HASH_ELEMENT;
@@ -195,6 +196,7 @@ mod tests {
         });
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_gensk(b: &mut Bencher) {
         let seed = hash::tests::HASH_ELEMENT;
@@ -208,6 +210,7 @@ mod tests {
         });
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_genpk(b: &mut Bencher) {
         let seed = hash::tests::HASH_ELEMENT;
@@ -220,6 +223,7 @@ mod tests {
         b.iter(|| sk.genpk());
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_sign(b: &mut Bencher) {
         let seed = hash::tests::HASH_ELEMENT;
@@ -233,6 +237,7 @@ mod tests {
         b.iter(|| sk.sign(black_box(&msg)));
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_verify(b: &mut Bencher) {
         let seed = hash::tests::HASH_ELEMENT;
@@ -248,6 +253,7 @@ mod tests {
         b.iter(|| pk.verify(black_box(&sign), black_box(&msg)));
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_split_msg(b: &mut Bencher) {
         let msg = Hash { h: [0; HASH_SIZE] };

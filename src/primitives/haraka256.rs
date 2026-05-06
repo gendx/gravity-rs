@@ -156,6 +156,7 @@ mod tests {
         dst
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_haraka256_5round(b: &mut Bencher) {
         let src = b"\x00\x01\x02\x03\x04\x05\x06\x07\
@@ -165,6 +166,7 @@ mod tests {
         b.iter(|| haraka256_through::<5>(black_box(src)));
     }
 
+    #[cfg(not(coverage))]
     #[bench]
     fn bench_haraka256_6round(b: &mut Bencher) {
         let src = b"\x00\x01\x02\x03\x04\x05\x06\x07\
