@@ -146,6 +146,11 @@ mod tests {
         haraka256::<6>(&mut dst, src);
         assert_eq!(&dst, expect);
     }
+}
+
+#[cfg(all(test, not(coverage)))]
+mod bench {
+    use super::*;
 
     use std::hint::black_box;
     use test::Bencher;
@@ -156,7 +161,6 @@ mod tests {
         dst
     }
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_haraka256_5round(b: &mut Bencher) {
         let src = b"\x00\x01\x02\x03\x04\x05\x06\x07\
@@ -166,7 +170,6 @@ mod tests {
         b.iter(|| haraka256_through::<5>(black_box(src)));
     }
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_haraka256_6round(b: &mut Bencher) {
         let src = b"\x00\x01\x02\x03\x04\x05\x06\x07\

@@ -241,6 +241,11 @@ mod tests {
 
         assert!(pk.verify(&sign, &msg));
     }
+}
+
+#[cfg(all(test, not(coverage)))]
+mod bench {
+    use super::*;
 
     macro_rules! all_benches {
         ( $mod:ident, $params:ty ) => {

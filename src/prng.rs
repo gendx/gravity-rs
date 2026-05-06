@@ -113,6 +113,12 @@ mod tests {
         assert_eq!(dst[1].h, *array_ref![expect, 32, 32]);
         assert_eq!(dst[2].h, *array_ref![expect, 64, 32]);
     }
+}
+
+#[cfg(all(test, not(coverage)))]
+mod bench {
+    use super::super::hash;
+    use super::*;
 
     macro_rules! all_benches {
         ( $mod:ident, $params:ty ) => {
@@ -128,7 +134,6 @@ mod tests {
 
     use test::Bencher;
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_genblock(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
@@ -139,7 +144,6 @@ mod tests {
         });
     }
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_genblocks_5(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
@@ -150,7 +154,6 @@ mod tests {
         });
     }
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_genblocks_20(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);
@@ -170,7 +173,6 @@ mod tests {
         });
     }
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_genblocks_wots(b: &mut Bencher) {
         let prng = Prng::new(&hash::tests::HASH_ELEMENT);

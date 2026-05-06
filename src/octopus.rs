@@ -179,7 +179,7 @@ mod tests {
     use super::*;
 
     #[derive(Debug, PartialEq)]
-    struct Octopus83;
+    pub struct Octopus83;
 
     impl GravityParams for Octopus83 {
         #[cfg(test)]
@@ -204,7 +204,7 @@ mod tests {
     }
 
     #[derive(Debug, PartialEq)]
-    struct Octopus84;
+    pub struct Octopus84;
 
     impl GravityParams for Octopus84 {
         #[cfg(test)]
@@ -255,7 +255,7 @@ mod tests {
         assert_eq!(Octopus::<P>::max_size_hashes(), expected_max_hashes);
     }
 
-    fn merkle_gen_octopus_leaves<P: GravityParams>(
+    pub fn merkle_gen_octopus_leaves<P: GravityParams>(
         leaves: &[Hash],
         height: usize,
         indices: [usize; P::PORS_K],
@@ -328,6 +328,12 @@ mod tests {
             }
         }
     }
+}
+
+#[cfg(all(test, not(coverage)))]
+mod bench {
+    use super::tests::{Octopus83, Octopus84, merkle_gen_octopus_leaves};
+    use super::*;
 
     macro_rules! all_benches {
         ( $mod:ident, $params:ty ) => {
@@ -349,7 +355,6 @@ mod tests {
     use std::hint::black_box;
     use test::Bencher;
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_merkle_gen_octopus_8_4(b: &mut Bencher) {
         const HEIGHT: usize = 3;
@@ -358,7 +363,6 @@ mod tests {
         b.iter(|| merkle_gen_octopus_leaves::<Octopus84>(black_box(&src), HEIGHT, indices));
     }
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_merkle_compress_octopus_8_3(b: &mut Bencher) {
         const HEIGHT: usize = 3;

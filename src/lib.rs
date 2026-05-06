@@ -85,6 +85,7 @@ pub mod tests {
         };
     }
 
+    #[cfg(not(coverage))]
     macro_rules! param_benches {
         (
             $mod:ident,
@@ -106,7 +107,9 @@ pub mod tests {
         };
     }
 
-    pub(crate) use {param_benches, param_tests};
+    #[cfg(not(coverage))]
+    pub(crate) use param_benches;
+    pub(crate) use param_tests;
 
     macro_rules! all_tests {
         ( $mod:ident, $params:ty ) => {

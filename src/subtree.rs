@@ -170,6 +170,12 @@ mod tests {
         assert_eq!(root, pk.h);
         assert!(pk.verify(&address, &sign, &msg));
     }
+}
+
+#[cfg(all(test, not(coverage)))]
+mod bench {
+    use super::super::hash;
+    use super::*;
 
     macro_rules! all_benches {
         ( $mod:ident, $params:ty ) => {

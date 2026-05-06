@@ -242,6 +242,12 @@ mod tests {
         haraka512_bis::<6>(&mut dst, src);
         assert_eq!(&dst, expect);
     }
+}
+
+#[cfg(all(test, not(coverage)))]
+mod bench {
+    use super::tests::haraka512_bis;
+    use super::*;
 
     use std::hint::black_box;
     use test::Bencher;
@@ -258,7 +264,6 @@ mod tests {
         dst
     }
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_haraka512_5round(b: &mut Bencher) {
         let src1 = b"\x00\x01\x02\x03\x04\x05\x06\x07\
@@ -272,7 +277,6 @@ mod tests {
         b.iter(|| haraka512_through::<5>(black_box(src1), black_box(src2)));
     }
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_haraka512_5round_bis(b: &mut Bencher) {
         let src = b"\x00\x01\x02\x03\x04\x05\x06\x07\
@@ -286,7 +290,6 @@ mod tests {
         b.iter(|| haraka512_through_bis::<5>(black_box(src)));
     }
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_haraka512_6round(b: &mut Bencher) {
         let src1 = b"\x00\x01\x02\x03\x04\x05\x06\x07\
@@ -300,7 +303,6 @@ mod tests {
         b.iter(|| haraka512_through::<6>(black_box(src1), black_box(src2)));
     }
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_haraka512_6round_bis(b: &mut Bencher) {
         let src = b"\x00\x01\x02\x03\x04\x05\x06\x07\

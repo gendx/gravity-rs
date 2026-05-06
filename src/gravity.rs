@@ -228,7 +228,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{ConfigType, GravityLarge, GravityMedium, GravitySmall};
+    use crate::config::{ConfigType, GravitySmall};
+    #[cfg(not(coverage))]
+    use crate::config::{GravityLarge, GravityMedium};
 
     macro_rules! all_tests {
         ( $mod:ident, $params:ty ) => {
@@ -456,6 +458,12 @@ mod tests {
 
         assert!(sign_bytes == expect);
     }
+}
+
+#[cfg(all(test, not(coverage)))]
+mod bench {
+    use super::*;
+    use crate::config::{GravityLarge, GravityMedium, GravitySmall};
 
     macro_rules! all_benches {
         ( $mod:ident, $params:ty ) => {

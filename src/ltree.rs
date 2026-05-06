@@ -99,33 +99,34 @@ mod tests {
         let dst = ltree_leaves_ret(&[h0; 6]);
         assert_eq!(dst, h192);
     }
+}
+
+#[cfg(all(test, not(coverage)))]
+mod bench {
+    use super::*;
 
     use super::super::config;
     use std::hint::black_box;
     use test::Bencher;
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_ltree_1(b: &mut Bencher) {
         let h = [hash::tests::HASH_ELEMENT; 1];
         b.iter(|| ltree_leaves_ret(black_box(&h)));
     }
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_ltree_5(b: &mut Bencher) {
         let h = [hash::tests::HASH_ELEMENT; 5];
         b.iter(|| ltree_leaves_ret(black_box(&h)));
     }
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_ltree_20(b: &mut Bencher) {
         let h = [hash::tests::HASH_ELEMENT; 20];
         b.iter(|| ltree_leaves_ret(black_box(&h)));
     }
 
-    #[cfg(not(coverage))]
     #[bench]
     fn bench_ltree_wots(b: &mut Bencher) {
         let h = [hash::tests::HASH_ELEMENT; config::WOTS_ELL];
