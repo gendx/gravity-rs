@@ -1,0 +1,12 @@
+on: [push, pull_request]
+name: Build examples
+jobs:
+  examples:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-D warnings"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Build examples
+        run: cargo build --verbose --examples

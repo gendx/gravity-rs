@@ -41,8 +41,92 @@ fn main() {
 
     octopus_size_cutoff::<BigRational>(16, 14, -12.0);
     octopus_size_cutoff::<BigRational>(25, 9, -20.0);
+
+    octopus_size_bpors_distribution::<F64Log2>(7, 5, 1, 8);
+    println!("****************************************");
+    octopus_size_bpors_distribution::<F64Log2>(7, 5, 8, 6);
+    println!("****************************************");
+
+    octopus_size_bpors_distribution::<BigRational>(7, 5, 1, 8);
+    println!("****************************************");
+    octopus_size_bpors_distribution::<BigRational>(7, 5, 8, 6);
+    println!("****************************************");
 }
 
+/// Computes the size distribution of a bucketized PORS Octopus (BPORS) as
+/// described in https://eprint.iacr.org/2026/1328.
+#[expect(non_snake_case)]
+fn octopus_size_bpors_distribution<T>(h: u32, k: u32, B: u32, K: u32)
+where
+    T: Arithmetic + Debug + Clone,
+    for<'a> &'a T: Mul<&'a T, Output = T>,
+{
+    let mut mem: Memoized<T> = Memoized::new(k as usize, h as usize);
+
+    let mut baseline = Vec::new();
+    for m in 0..=k * h {
+        let p = mem.size(h, k, m);
+        if !p.is_zero() {
+            println!("base size({h}, {k}, {m}) = {}", p.to_f64_log2(),);
+            baseline.resize_with(m as usize, T::zero);
+            baseline.push(p.clone());
+        }
+    }
+
+    let distribution = convoluted_exponent(&baseline, K);
+    let mut sum = T::zero();
+    for (i, p) in distribution.iter().enumerate() {
+        let m = i as u32 + K * B;
+        sum += p;
+        if !p.is_zero() {
+            println!(
+                "product size({h}, {k}, {K}, {m}) = {} | {} | {}",
+                p.to_f64_log2(),
+                sum.to_f64_log2(),
+                sum.to_f64()
+            );
+        }
+    }
+}
+
+/// Computes the power of a probability distribution using fast exponentiation.
+fn convoluted_exponent<T>(distribution: &[T], mut n: u32) -> Vec<T>
+where
+    T: Arithmetic + Clone,
+    for<'a> &'a T: Mul<&'a T, Output = T>,
+{
+    let mut result = vec![T::one(); 1];
+    let mut power: Vec<T> = distribution.to_vec();
+    loop {
+        if n & 1 == 1 {
+            result = convolution(&result, &power);
+        }
+        n >>= 1;
+        if n == 0 {
+            break;
+        }
+        power = convolution(&power, &power);
+    }
+    result
+}
+
+/// Computes the convolution of two probability distributions.
+fn convolution<T>(a: &[T], b: &[T]) -> Vec<T>
+where
+    T: Arithmetic + Clone,
+    for<'a> &'a T: Mul<&'a T, Output = T>,
+{
+    let mut product = vec![T::zero(); a.len() + b.len() - 1];
+    for (i, x) in a.iter().enumerate() {
+        for (j, y) in b.iter().enumerate() {
+            product[i + j] += x * y;
+        }
+    }
+    product
+}
+
+/// Computes the size distribution of a PORS Octopus as described in
+/// https://eprint.iacr.org/2025/2069.
 fn octopus_size_distribution<T>(h: u32, k: u32)
 where
     T: Arithmetic + Debug + Clone,
