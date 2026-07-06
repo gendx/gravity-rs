@@ -1,9 +1,6 @@
-use crate::address;
 use crate::config::*;
 use crate::hash::Hash;
-use crate::merkle;
-use crate::prng;
-use crate::wots;
+use crate::{address, merkle, prng, wots};
 use std::array;
 use std::marker::PhantomData;
 

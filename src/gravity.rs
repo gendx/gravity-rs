@@ -1,11 +1,6 @@
-use crate::address;
 use crate::config::{self, GravityParams};
-use crate::hash;
 use crate::hash::Hash;
-use crate::merkle;
-use crate::pors;
-use crate::prng;
-use crate::subtree;
+use crate::{address, hash, merkle, pors, prng, subtree};
 use arrayref::array_ref;
 use std::array;
 use std::marker::PhantomData;
@@ -87,7 +82,8 @@ impl<P: GravityParams> SecKey<P> {
             subtree_sign
         });
 
-        // For compatibility with 32-bit architectures, the index must fit in 32 bits here.
+        // For compatibility with 32-bit architectures, the index must fit in 32 bits
+        // here.
         let index: u64 = address.get_instance();
         debug_assert!(index <= u32::MAX as u64);
         let mut auth_c = [Default::default(); P::GRAVITY_C];
@@ -165,7 +161,8 @@ where
                 address.shift(P::MERKLE_H);
             }
 
-            // For compatibility with 32-bit architectures, the index must fit in 32 bits here.
+            // For compatibility with 32-bit architectures, the index must fit in 32 bits
+            // here.
             let index: u64 = address.get_instance();
             debug_assert!(index <= u32::MAX as u64);
             merkle::merkle_compress_auth(&mut h, &self.auth_c, P::GRAVITY_C, index as usize);

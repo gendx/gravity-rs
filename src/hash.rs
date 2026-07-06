@@ -1,6 +1,5 @@
 use crate::config;
-use crate::primitives::haraka256;
-use crate::primitives::haraka512;
+use crate::primitives::{haraka256, haraka512};
 use arrayref::array_ref;
 use sha2::{Digest, Sha256};
 use std::fmt;

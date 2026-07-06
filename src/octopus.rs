@@ -1,7 +1,6 @@
 use crate::config::*;
-use crate::hash;
 use crate::hash::Hash;
-use crate::merkle;
+use crate::{hash, merkle};
 use arrayref::array_mut_ref;
 use std::marker::PhantomData;
 use std::mem;

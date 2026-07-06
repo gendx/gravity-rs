@@ -120,8 +120,7 @@ pub fn aes256_ret(src: &[u8; 16], key: &[u8; 32]) -> [u8; 16] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::primitives::constants;
-    use crate::primitives::simd128;
+    use crate::primitives::{constants, simd128};
     use arrayref::array_mut_ref;
 
     #[test]

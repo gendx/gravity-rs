@@ -1,10 +1,6 @@
-use crate::address;
 use crate::config::*;
-use crate::hash;
 use crate::hash::Hash;
-use crate::merkle;
-use crate::octopus;
-use crate::prng;
+use crate::{address, hash, merkle, octopus, prng};
 use arrayref::array_ref;
 use std::array;
 use std::marker::PhantomData;
