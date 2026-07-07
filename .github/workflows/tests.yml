@@ -8,5 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
+      - name: Tests in examples
+        run: cargo test --release --examples
       - name: Tests
         run: cargo test --release

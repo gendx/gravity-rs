@@ -1,7 +1,7 @@
 use num::{BigInt, BigRational, ToPrimitive};
 use std::fmt::Debug;
 use std::iter::Sum;
-use std::ops::{AddAssign, Div, Index, IndexMut, Mul, MulAssign};
+use std::ops::{Add, AddAssign, Div, Index, IndexMut, Mul, MulAssign};
 
 fn main() {
     octopus_size_distribution::<F64Log2>(16, 24);
@@ -408,15 +408,29 @@ impl Mul<&Self> for F64Log2 {
     }
 }
 
+impl Add for F64Log2 {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        if self.0 < rhs.0 {
+            rhs + self
+        } else if rhs.0 == f64::NEG_INFINITY {
+            self
+        } else {
+            F64Log2(self.0 + 2.0_f64.powf(rhs.0 - self.0).ln_1p() / std::f64::consts::LN_2)
+        }
+    }
+}
+
 impl AddAssign for F64Log2 {
     fn add_assign(&mut self, rhs: Self) {
-        self.0 = (2.0_f64.powf(self.0) + 2.0_f64.powf(rhs.0)).log2();
+        *self = *self + rhs;
     }
 }
 
 impl AddAssign<&Self> for F64Log2 {
     fn add_assign(&mut self, rhs: &Self) {
-        self.0 = (2.0_f64.powf(self.0) + 2.0_f64.powf(rhs.0)).log2();
+        *self = *self + *rhs;
     }
 }
 
@@ -432,7 +446,7 @@ impl Sum for F64Log2 {
     where
         I: Iterator<Item = Self>,
     {
-        F64Log2(iter.fold(0.0, |acc, x| acc + 2.0_f64.powf(x.0)).log2())
+        iter.fold(Self::zero(), |acc, x| acc + x)
     }
 }
 

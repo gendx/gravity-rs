@@ -1,7 +1,7 @@
 use num::{BigInt, BigRational, ToPrimitive};
 use std::fmt::Debug;
 use std::iter::Sum;
-use std::ops::{AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub};
+use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub};
 
 fn main() {
     let mut mem: Memoized<F64Log2> = Memoized::new(50, 10);
@@ -361,23 +361,42 @@ impl Mul<&Self> for F64Log2 {
     }
 }
 
+impl Add for F64Log2 {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        if self.0 < rhs.0 {
+            rhs + self
+        } else if rhs.0 == f64::NEG_INFINITY {
+            self
+        } else {
+            F64Log2(self.0 + 2.0_f64.powf(rhs.0 - self.0).ln_1p() / std::f64::consts::LN_2)
+        }
+    }
+}
+
 impl Sub for F64Log2 {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        F64Log2((2.0_f64.powf(self.0) - 2.0_f64.powf(rhs.0)).log2())
+        assert!(self.0 >= rhs.0);
+        if rhs.0 == f64::NEG_INFINITY {
+            self
+        } else {
+            F64Log2(self.0 + (-(2.0_f64.powf(rhs.0 - self.0))).ln_1p() / std::f64::consts::LN_2)
+        }
     }
 }
 
 impl AddAssign for F64Log2 {
     fn add_assign(&mut self, rhs: Self) {
-        self.0 = (2.0_f64.powf(self.0) + 2.0_f64.powf(rhs.0)).log2();
+        *self = *self + rhs;
     }
 }
 
 impl AddAssign<&Self> for F64Log2 {
     fn add_assign(&mut self, rhs: &Self) {
-        self.0 = (2.0_f64.powf(self.0) + 2.0_f64.powf(rhs.0)).log2();
+        *self = *self + *rhs;
     }
 }
 
@@ -407,7 +426,7 @@ impl Sum for F64Log2 {
     where
         I: Iterator<Item = Self>,
     {
-        F64Log2(iter.fold(0.0, |acc, x| acc + 2.0_f64.powf(x.0)).log2())
+        iter.fold(Self::zero(), |acc, x| acc + x)
     }
 }
 
@@ -600,5 +619,52 @@ impl<T> IndexMut<(usize, usize, usize)> for Vec3d<T> {
             self.size.2
         );
         &mut self.matrix[index.0 + self.size.0 * (index.1 + self.size.1 * index.2)]
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_f64log2_add() {
+        assert_eq!((F64Log2::zero() + F64Log2::zero()).to_f64(), 0.0);
+        assert_eq!((F64Log2::zero() + F64Log2::one()).to_f64(), 1.0);
+        assert_eq!((F64Log2::one() + F64Log2::zero()).to_f64(), 1.0);
+        assert_eq!((F64Log2::one() + F64Log2::one()).to_f64(), 2.0);
+        assert_eq!(
+            (<F64Log2 as Arithmetic>::from(2) + <F64Log2 as Arithmetic>::from(2)).to_f64(),
+            4.0
+        );
+        assert_eq!(
+            (<F64Log2 as Arithmetic>::from(2) + <F64Log2 as Arithmetic>::from(3)).to_f64_log2(),
+            5.0_f64.log2()
+        );
+        assert_eq!(
+            (<F64Log2 as Arithmetic>::from(2).powi(10_000) + <F64Log2 as Arithmetic>::from(2))
+                .to_f64_log2(),
+            10_000.0
+        );
+        assert_eq!(
+            (<F64Log2 as Arithmetic>::from(2) + <F64Log2 as Arithmetic>::from(2).powi(10_000))
+                .to_f64_log2(),
+            10_000.0
+        );
+    }
+
+    #[test]
+    fn test_f64log2_powi() {
+        for i in 0..=10_000 {
+            assert_eq!(
+                <F64Log2 as Arithmetic>::from(2).powi(i).to_f64_log2(),
+                i as f64
+            );
+            assert_eq!(
+                (F64Log2::one() / <F64Log2 as Arithmetic>::from(2))
+                    .powi(i)
+                    .to_f64_log2(),
+                -(i as f64)
+            );
+        }
     }
 }
