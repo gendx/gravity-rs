@@ -4,10 +4,10 @@ use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub};
 
 fn main() {
-    let mut mem: Memoized<F64Log2> = Memoized::new(50, 10);
+    let mut mem: Memoized<F64Log2> = Memoized::new(/* max(r) */ 50, /* max(B) */ 20);
     mem.evaluate();
 
-    let mut mem: Memoized<BigRational> = Memoized::new(50, 10);
+    let mut mem: Memoized<BigRational> = Memoized::new(/* max(r) */ 50, /* max(B) */ 20);
     mem.evaluate();
 }
 
@@ -58,6 +58,10 @@ where
         self.slh_dsa_variants("SLH-DSA-192f", 33, 8, 66, 64);
         self.slh_dsa_variants("SLH-DSA-256s", 22, 14, 64, 64);
         self.slh_dsa_variants("SLH-DSA-256f", 35, 9, 68, 64);
+        // Parameters from https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-230.ipd.pdf, section 2.1.
+        self.slh_dsa_variants("SLH-DSA-128-24", 6, 24, 22, 24);
+        self.slh_dsa_variants("SLH-DSA-192-24", 9, 25, 21, 24);
+        self.slh_dsa_variants("SLH-DSA-256-24", 12, 25, 21, 24);
     }
 
     fn bpors_params(&mut self) {
@@ -86,6 +90,19 @@ where
         println!(
             "- 256f: {}",
             self.bpors(5, 29 << 3, 9, 3, 68, 64).to_f64_log2()
+        );
+        // Parameters from https://eprint.iacr.org/2026/1328, section 5.2.
+        println!(
+            "- 128-24: {}",
+            self.bpors(7, 23 << 5, 2, 13, 22, 24).to_f64_log2()
+        );
+        println!(
+            "- 192-24: {}",
+            self.bpors(8, 17 << 9, 2, 13, 21, 24).to_f64_log2()
+        );
+        println!(
+            "- 256-24: {}",
+            self.bpors(8, 27 << 7, 3, 13, 21, 24).to_f64_log2()
         );
     }
 
