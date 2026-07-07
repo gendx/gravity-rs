@@ -1,4 +1,4 @@
-use num::{BigInt, BigRational, ToPrimitive};
+use num::{BigInt, BigRational, ToPrimitive, Zero};
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Index, IndexMut, Mul, MulAssign};
@@ -490,7 +490,7 @@ impl Arithmetic for BigRational {
     }
 
     fn is_zero(&self) -> bool {
-        *self == Self::zero()
+        Zero::is_zero(self)
     }
 
     fn from(x: u32) -> Self {
