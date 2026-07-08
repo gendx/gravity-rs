@@ -1,25 +1,28 @@
-use num::{BigInt, BigRational, ToPrimitive};
+use num::bigint::Sign;
+use num::{BigInt, BigRational, BigUint, One, ToPrimitive, Zero};
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Sub};
 
 fn main() {
-    let mut mem: Memoized<F64Log2> = Memoized::new(/* max(r) */ 50, /* max(B) */ 20);
+    let mut mem: Memoized<F64Log2, F64Log2> =
+        Memoized::new(/* max(r) */ 50, /* max(B) */ 20);
     mem.evaluate();
 
-    let mut mem: Memoized<BigRational> = Memoized::new(/* max(r) */ 50, /* max(B) */ 20);
+    let mut mem: Memoized<BigInt, BigRational> =
+        Memoized::new(/* max(r) */ 50, /* max(B) */ 20);
     mem.evaluate();
 }
 
-struct Memoized<T> {
+struct Memoized<I, T> {
     weight_poisson: Vec3d<T>,
-    choose: Vec2d<T>,
+    choose: Vec2d<I>,
     binom_power: Vec2d<T>,
     binom_opposite_power: Vec2d<T>,
     rmax: u32,
 }
 
-impl<T: Clone> Memoized<T> {
+impl<I: Clone, T: Clone> Memoized<I, T> {
     fn new(rmax: u32, bmax: usize) -> Self {
         Self {
             weight_poisson: Vec3d::new((70, 70, rmax as usize + 1)),
@@ -31,9 +34,11 @@ impl<T: Clone> Memoized<T> {
     }
 }
 
-impl<T> Memoized<T>
+impl<I, T> Memoized<I, T>
 where
-    T: Arithmetic + Debug + Clone,
+    I: Integer + Clone,
+    T: Rational<I> + Debug + Clone,
+    for<'a> &'a I: Mul<&'a I, Output = I>,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
     fn evaluate(&mut self) {
@@ -109,8 +114,12 @@ where
     fn slh_dsa_variants(&mut self, title: &str, k: u32, t: u32, h: u32, q: u32) {
         println!("- {title}: {}", self.fors(k, t, h, q).to_f64_log2());
         println!(
-            "- {title} (PORS): {}",
+            "- {title} (PORS lower bound): {}",
             self.pors(k, k << t, h, q).to_f64_log2()
+        );
+        println!(
+            "- {title} (PORS precise): {}",
+            self.pors_precise(k, k << t, h, q).to_f64_log2()
         );
     }
 
@@ -158,7 +167,7 @@ where
 
         let mut res = T::zero();
         for r in 0..=self.rmax {
-            let cover = Self::cover_pors(k, t, r);
+            let cover = Self::cover_pors(k, t, k * r);
             let poisson = Self::weight_poisson(&mut self.weight_poisson, r, h, q, &rate);
             eprint!("r={r}: {} * {}", cover.to_f64_log2(), poisson.to_f64_log2());
             let product = cover * poisson;
@@ -170,23 +179,155 @@ where
     }
 
     /// Probability that `k` distinct values chosen uniformly among `0..t` are
-    /// covered by `k * r` arbitrary distinct values of `0..t`.
+    /// covered by `revealed` arbitrary distinct values of `0..t`.
     ///
-    /// This is equal to `choose(k, k * r) / choose(k, t)`, which simplifies to:
-    /// `(kr)! / (k! (kr - k)!) * (k! (t - k)!) / t!`
-    /// `(kr)! / (kr - k)! * (t - k)! / t!`
+    /// This is equal to `choose(k, revealed) / choose(k, t)`, which simplifies
+    /// to:
+    /// `revealed! / (k! (revealed - k)!) * (k! (t - k)!) / t!`
+    /// `revealed! / (revealed - k)! * (t - k)! / t!`
     ///
     /// See https://eprint.iacr.org/2017/909, section 6.2.
-    fn cover_pors(k: u32, t: u32, r: u32) -> T {
+    fn cover_pors(k: u32, t: u32, revealed: u32) -> T {
         assert!(k <= t);
-        if r == 0 {
+        if revealed < k {
             return T::zero();
+        } else if revealed >= t {
+            return T::one();
         }
         let mut res = T::one();
         for i in 0..k {
-            res *= T::from(k * r - i) / T::from(t - i);
+            res *= T::from(revealed - i) / T::from(t - i);
         }
         res
+    }
+
+    /// Returns an upper bound of the success probability of an attacker making
+    /// `2^q` queries against a PORS construction with `k` values chosen among
+    /// `t`, on a hyper-tree of height `h`.
+    ///
+    /// Contrary to [`Self::pors`], this version doesn't bound the number of
+    /// revealed values after `r` signatures as `k * r`, but rather computes
+    /// the exact distribution, assuming all signatures sample the `k`
+    /// values uniformly (i.e. using vanilla PORS without forced pruning).
+    ///
+    /// See https://eprint.iacr.org/2017/909.
+    fn pors_precise(&mut self, k: u32, t: u32, h: u32, q: u32) -> T {
+        let kr_max = (k * self.rmax).min(t);
+
+        let size_table = self.pors_size_table(k, t);
+        let choose_kt = Self::choose_impl(k, t);
+        let mut choose_kt_power = I::one();
+
+        // Table of `cover_pors(k, t, revealed)`, scaled by `choose(k, t)`.
+        let cover_pors_table: Vec<I> = (0..=kr_max)
+            .map(|revealed| Self::choose_impl(k, revealed))
+            .collect();
+
+        let rate = T::from_log2(q) / T::from_log2(h);
+
+        let mut res = T::zero();
+        for r in 0..=self.rmax {
+            let cover: I = (0..=(k * r).min(t) as usize)
+                .map(|revealed| {
+                    // Each term here is scaled by `choose(k, t) * choose(k, t)^r`...
+                    &cover_pors_table[revealed]
+                        * size_table[(r as usize, revealed)].as_ref().unwrap()
+                })
+                .sum();
+            // ...so we divide by `choose(k, t)^(r + 1)`.
+            choose_kt_power *= &choose_kt;
+            let cover = T::from_ratio(cover, choose_kt_power.clone());
+
+            let poisson = Self::weight_poisson(&mut self.weight_poisson, r, h, q, &rate);
+            eprint!("r={r}: {} * {}", cover.to_f64_log2(), poisson.to_f64_log2());
+            let product = cover * poisson;
+            eprint!(" = {}", product.to_f64_log2());
+            res += product;
+            eprintln!(" -> {}", res.to_f64_log2());
+        }
+        res
+    }
+
+    /// Returns a probability table indexed by `0 <= i <= min(k * r_max, t)` and
+    /// `0 <= j <= k` that contains in each cell the probability that: when
+    /// choosing `k` distinct values uniformly at random in `0..t`, `j` of those
+    /// overlap with `i` already revealed values.
+    ///
+    /// Each value is scaled by `choose(k, t)`.
+    fn overlap_table(&self, k: u32, t: u32) -> Vec2d<I> {
+        let kr_max = (k * self.rmax).min(t);
+
+        let mut table = Vec2d::new((kr_max as usize + 1, k as usize + 1));
+        for i in 0..=kr_max {
+            let mut sum = I::zero();
+            for j in 0..=k {
+                // The real probability is this value divided by `choose(k, t)`, but we let the
+                // caller divide once at the end, which allows working on big integers rather
+                // than big rationals, which is much faster.
+                let value = Self::choose_impl(j, i) * Self::choose_impl(k - j, t - i);
+                sum += &value;
+                if !value.is_zero() {
+                    eprintln!("  overlap[{t}, {k}, {i}, {j}] = {}", value.to_f64_log2());
+                }
+                table[(i as usize, j as usize)] = Some(value);
+            }
+            eprintln!(" overlap[{t}, {k}, {i}] = {}", sum.to_f64_log2());
+        }
+        table
+    }
+
+    /// Returns a probability table where `table[(r, i)]` contains the
+    /// probability that after `r` signatures following the PORS
+    /// construction (i.e. `r` samples each containing `k` distinct uniform
+    /// values among `0..t`) the number of revealed values is `i`.
+    ///
+    /// Each value is scaled by `choose(k, t)^r`.
+    fn pors_size_table(&self, k: u32, t: u32) -> Vec2d<I> {
+        let kr_max = (k * self.rmax).min(t);
+
+        let overlap_table = self.overlap_table(k, t);
+
+        let mut table = Vec2d::new((self.rmax as usize + 1, kr_max as usize + 1));
+        // Initial case: with zero previous signatures, exactly zero values have been
+        // revealed.
+        table[(0, 0)] = Some(I::one());
+        for i in 1..=kr_max as usize {
+            table[(0, i)] = Some(I::zero());
+        }
+
+        // Other cases by recursion on `r`.
+        for r in 1..=self.rmax as usize {
+            for i in 0..=kr_max as usize {
+                table[(r, i)] = Some(I::zero());
+            }
+
+            for i in 0..=kr_max as usize {
+                if table[(r - 1, i)].as_ref().unwrap().is_zero() {
+                    continue;
+                }
+                for j in 0..=k as usize {
+                    // Ignore indices beyond the threshold. This case can happen if `k * rmax > t`.
+                    if i + j > kr_max as usize {
+                        continue;
+                    }
+                    // Each value in `overlap_table` is scaled by `choose(k, t)`, so this is scaled
+                    // by `choose(k, t)^r`.
+                    let p = table[(r - 1, i)].as_ref().unwrap()
+                        * overlap_table[(i, k as usize - j)].as_ref().unwrap();
+                    *table[(r, i + j)].as_mut().unwrap() += p;
+                }
+            }
+
+            // For debugging.
+            for i in 0..=kr_max as usize {
+                let value = table[(r, i)].as_mut().unwrap();
+                if !value.is_zero() {
+                    eprintln!("  size_table[{t}, {k}, {r}, {i}] = {}", value.to_f64_log2());
+                }
+            }
+        }
+
+        table
     }
 
     /// See https://eprint.iacr.org/2026/1328.
@@ -199,7 +340,7 @@ where
         let mut res = T::zero();
         for r in 0..=self.rmax {
             let subcover = self.cover_bpors(&mut pors_table, k, t, B, r);
-            eprint!("r={r}: {}^{K}", subcover.to_f64_log2());
+            eprintln!("r={r}: {}^{K}", subcover.to_f64_log2());
             let cover = subcover.powi(K);
 
             let poisson = Self::weight_poisson(&mut self.weight_poisson, r, h, q, &rate);
@@ -216,12 +357,12 @@ where
     fn cover_bpors(&mut self, pors_table: &mut [Option<T>], k: u32, t: u32, B: u32, r: u32) -> T {
         (0..=r)
             .map(|rr| {
-                let binom = Self::choose(&mut self.choose, rr, r)
-                    * Self::binom_power(&mut self.binom_power, B, rr)
-                    * Self::binom_opposite_power(&mut self.binom_opposite_power, B, r - rr);
+                let binom = Self::binom_power(&mut self.binom_power, B, rr)
+                    * Self::binom_opposite_power(&mut self.binom_opposite_power, B, r - rr)
+                    * Self::choose(&mut self.choose, rr, r);
                 let subcover = &mut pors_table[rr as usize];
                 if subcover.is_none() {
-                    *subcover = Some(Self::cover_pors(k, t, rr));
+                    *subcover = Some(Self::cover_pors(k, t, k * rr));
                 }
                 let subcover = subcover.as_ref().unwrap();
                 eprint!(
@@ -236,7 +377,7 @@ where
             .sum()
     }
 
-    fn choose(table: &mut Vec2d<T>, n: u32, among: u32) -> &T {
+    fn choose(table: &mut Vec2d<I>, n: u32, among: u32) -> &I {
         let x = &mut table[(n as usize, among as usize)];
         if x.is_none() {
             let value = Self::choose_impl(n, among);
@@ -245,15 +386,8 @@ where
         x.as_ref().unwrap()
     }
 
-    fn choose_impl(n: u32, among: u32) -> T {
-        if n > among {
-            return T::zero();
-        }
-        let mut res = T::one();
-        for i in 0..n {
-            res *= T::from(among - i) / T::from(i + 1);
-        }
-        res
+    fn choose_impl(n: u32, among: u32) -> I {
+        I::choose(n, among)
     }
 
     /// Returns 2^(-B * r)
@@ -298,7 +432,38 @@ where
     }
 }
 
-trait Arithmetic:
+trait Integer:
+    Mul<Output = Self>
+    + Div<Output = Self>
+    + AddAssign
+    + MulAssign
+    + Sum
+    + for<'a> AddAssign<&'a Self>
+    + for<'a> MulAssign<&'a Self>
+{
+    fn zero() -> Self;
+
+    fn one() -> Self;
+
+    fn is_zero(&self) -> bool;
+
+    fn from(x: u32) -> Self;
+
+    fn choose(n: u32, among: u32) -> Self {
+        if n > among {
+            return Self::zero();
+        }
+        let mut res = Self::one();
+        for i in 0..n {
+            res *= Self::from(among - i) / Self::from(i + 1);
+        }
+        res
+    }
+
+    fn to_f64_log2(&self) -> f64;
+}
+
+trait Rational<I: Integer>:
     Mul<Output = Self>
     + Div<Output = Self>
     + Sub<Output = Self>
@@ -310,7 +475,10 @@ trait Arithmetic:
     + for<'a> Div<&'a Self, Output = Self>
     + for<'a> AddAssign<&'a Self>
     + for<'a> MulAssign<&'a Self>
+    + for<'a> Mul<&'a I, Output = Self>
 {
+    fn from_ratio(num: I, denom: I) -> Self;
+
     fn zero() -> Self;
 
     fn one() -> Self;
@@ -443,11 +611,37 @@ impl Sum for F64Log2 {
     where
         I: Iterator<Item = Self>,
     {
-        iter.fold(Self::zero(), |acc, x| acc + x)
+        iter.fold(<Self as Rational<Self>>::zero(), |acc, x| acc + x)
     }
 }
 
-impl Arithmetic for F64Log2 {
+impl Integer for F64Log2 {
+    fn zero() -> Self {
+        F64Log2(f64::NEG_INFINITY)
+    }
+
+    fn one() -> Self {
+        F64Log2(0.0)
+    }
+
+    fn is_zero(&self) -> bool {
+        self.0 == f64::NEG_INFINITY
+    }
+
+    fn from(x: u32) -> Self {
+        F64Log2((x as f64).log2())
+    }
+
+    fn to_f64_log2(&self) -> f64 {
+        self.0
+    }
+}
+
+impl Rational<F64Log2> for F64Log2 {
+    fn from_ratio(num: F64Log2, denom: F64Log2) -> Self {
+        num / denom
+    }
+
     fn zero() -> Self {
         F64Log2(f64::NEG_INFINITY)
     }
@@ -485,21 +679,83 @@ impl Arithmetic for F64Log2 {
     }
 }
 
-impl Arithmetic for BigRational {
+impl Integer for BigInt {
     fn zero() -> Self {
-        BigRational::from_integer(BigInt::from(0))
+        <BigInt as Zero>::zero()
     }
 
     fn one() -> Self {
-        BigRational::from_integer(BigInt::from(1))
+        <BigInt as One>::one()
+    }
+
+    fn is_zero(&self) -> bool {
+        Zero::is_zero(self)
     }
 
     fn from(x: u32) -> Self {
-        BigRational::from_integer(BigInt::from(x))
+        x.into()
+    }
+
+    fn choose(n: u32, among: u32) -> Self {
+        if n > among {
+            return <Self as Integer>::zero();
+        }
+
+        let mut num = <Self as Integer>::one();
+        for i in 0..n {
+            num *= <Self as Integer>::from(among - i);
+        }
+
+        let mut denom = <Self as Integer>::one();
+        for i in 0..n {
+            denom *= <Self as Integer>::from(i + 1);
+        }
+
+        num / denom
+    }
+
+    fn to_f64_log2(&self) -> f64 {
+        match self.sign() {
+            Sign::Minus => f64::NAN,
+            Sign::NoSign => f64::NEG_INFINITY,
+            Sign::Plus => biguint_log2(self.magnitude()),
+        }
+    }
+}
+
+fn biguint_log2(x: &BigUint) -> f64 {
+    let bits = x.bits();
+    if bits == 0 {
+        return f64::NEG_INFINITY;
+    }
+
+    if bits <= 64 {
+        x.to_f64().unwrap().log2()
+    } else {
+        let shift = bits - 64;
+        (x >> shift).to_f64().unwrap().log2() + (shift as f64)
+    }
+}
+
+impl Rational<BigInt> for BigRational {
+    fn from_ratio(num: BigInt, denom: BigInt) -> Self {
+        BigRational::new(num, denom)
+    }
+
+    fn zero() -> Self {
+        <BigRational as Zero>::zero()
+    }
+
+    fn one() -> Self {
+        <BigRational as One>::one()
+    }
+
+    fn from(x: u32) -> Self {
+        BigRational::from_integer(<BigInt as Integer>::from(x))
     }
 
     fn from_log2(x: u32) -> Self {
-        BigRational::from_integer(BigInt::from(1) << x)
+        BigRational::from_integer(<BigInt as Integer>::one() << x)
     }
 
     fn to_f64(&self) -> f64 {
@@ -507,7 +763,7 @@ impl Arithmetic for BigRational {
     }
 
     fn to_f64_log2(&self) -> f64 {
-        Arithmetic::to_f64(self).log2()
+        Rational::to_f64(self).log2()
     }
 
     fn powi(&self, n: u32) -> Self {
@@ -515,11 +771,11 @@ impl Arithmetic for BigRational {
     }
 
     fn one_minus_x(&self) -> Self {
-        Self::one() - self
+        <BigRational as One>::one() - self
     }
 
     fn exp(&self) -> Self {
-        BigRational::from_float(Arithmetic::to_f64(self).exp()).unwrap()
+        BigRational::from_float(Rational::to_f64(self).exp()).unwrap()
     }
 }
 
@@ -645,26 +901,40 @@ mod test {
 
     #[test]
     fn test_f64log2_add() {
-        assert_eq!((F64Log2::zero() + F64Log2::zero()).to_f64(), 0.0);
-        assert_eq!((F64Log2::zero() + F64Log2::one()).to_f64(), 1.0);
-        assert_eq!((F64Log2::one() + F64Log2::zero()).to_f64(), 1.0);
-        assert_eq!((F64Log2::one() + F64Log2::one()).to_f64(), 2.0);
         assert_eq!(
-            (<F64Log2 as Arithmetic>::from(2) + <F64Log2 as Arithmetic>::from(2)).to_f64(),
+            (<F64Log2 as Integer>::zero() + <F64Log2 as Integer>::zero()).to_f64(),
+            0.0
+        );
+        assert_eq!(
+            (<F64Log2 as Integer>::zero() + <F64Log2 as Integer>::one()).to_f64(),
+            1.0
+        );
+        assert_eq!(
+            (<F64Log2 as Integer>::one() + <F64Log2 as Integer>::zero()).to_f64(),
+            1.0
+        );
+        assert_eq!(
+            (<F64Log2 as Integer>::one() + <F64Log2 as Integer>::one()).to_f64(),
+            2.0
+        );
+        assert_eq!(
+            (<F64Log2 as Integer>::from(2) + <F64Log2 as Integer>::from(2)).to_f64(),
             4.0
         );
         assert_eq!(
-            (<F64Log2 as Arithmetic>::from(2) + <F64Log2 as Arithmetic>::from(3)).to_f64_log2(),
+            Integer::to_f64_log2(&(<F64Log2 as Integer>::from(2) + <F64Log2 as Integer>::from(3))),
             5.0_f64.log2()
         );
         assert_eq!(
-            (<F64Log2 as Arithmetic>::from(2).powi(10_000) + <F64Log2 as Arithmetic>::from(2))
-                .to_f64_log2(),
+            Integer::to_f64_log2(
+                &(<F64Log2 as Integer>::from(2).powi(10_000) + <F64Log2 as Integer>::from(2))
+            ),
             10_000.0
         );
         assert_eq!(
-            (<F64Log2 as Arithmetic>::from(2) + <F64Log2 as Arithmetic>::from(2).powi(10_000))
-                .to_f64_log2(),
+            Integer::to_f64_log2(
+                &(<F64Log2 as Integer>::from(2) + <F64Log2 as Integer>::from(2).powi(10_000))
+            ),
             10_000.0
         );
     }
@@ -673,13 +943,13 @@ mod test {
     fn test_f64log2_powi() {
         for i in 0..=10_000 {
             assert_eq!(
-                <F64Log2 as Arithmetic>::from(2).powi(i).to_f64_log2(),
+                Integer::to_f64_log2(&<F64Log2 as Integer>::from(2).powi(i)),
                 i as f64
             );
             assert_eq!(
-                (F64Log2::one() / <F64Log2 as Arithmetic>::from(2))
-                    .powi(i)
-                    .to_f64_log2(),
+                Integer::to_f64_log2(
+                    &(<F64Log2 as Integer>::one() / <F64Log2 as Integer>::from(2)).powi(i)
+                ),
                 -(i as f64)
             );
         }
