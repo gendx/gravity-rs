@@ -180,10 +180,10 @@ struct Memoized<T> {
 impl<T: Clone> Memoized<T> {
     fn new(k: usize, h: usize) -> Self {
         Self {
-            choose: Vec2d::new((k + 1, k + 1)),
-            choose_h: Vec2d::new((k + 1, h + 1)),
-            siblings: Vec3d::new((h + 1, k + 1, k + 1)),
-            size: Vec3d::new((h + 1, k + 1, k * h + 1)),
+            choose: Vec2d::new([k + 1, k + 1]),
+            choose_h: Vec2d::new([k + 1, h + 1]),
+            siblings: Vec3d::new([h + 1, k + 1, k + 1]),
+            size: Vec3d::new([h + 1, k + 1, k * h + 1]),
         }
     }
 }
@@ -214,7 +214,7 @@ where
         k: u32,
         m: u32,
     ) -> &'a T {
-        let index = (h as usize, k as usize, m as usize);
+        let index = [h as usize, k as usize, m as usize];
         if size_table[index].is_none() {
             let value = Self::size_impl(
                 size_table,
@@ -280,7 +280,7 @@ where
         k: u32,
         s: u32,
     ) -> &'a T {
-        let index = (h as usize, k as usize, s as usize);
+        let index = [h as usize, k as usize, s as usize];
         if siblings_table[index].is_none() {
             let value = Self::siblings_impl(choose_table, choose_h_table, h, k, s);
             siblings_table[index] = Some(value);
@@ -306,7 +306,7 @@ where
     }
 
     fn choose(table: &mut Vec2d<T>, n: u32, among: u32) -> &T {
-        let x = &mut table[(n as usize, among as usize)];
+        let x = &mut table[[n as usize, among as usize]];
         if x.is_none() {
             let value = Self::choose_impl(n, among);
             *x = Some(value);
@@ -315,7 +315,7 @@ where
     }
 
     fn choose_h(table: &mut Vec2d<T>, n: u32, among_h: u32) -> &T {
-        let x = &mut table[(n as usize, among_h as usize)];
+        let x = &mut table[[n as usize, among_h as usize]];
         if x.is_none() {
             let value = Self::choose_impl(n, 1 << among_h);
             *x = Some(value);
@@ -510,118 +510,51 @@ impl Arithmetic for BigRational {
     }
 }
 
-struct Vec2d<T> {
-    size: (usize, usize),
+struct VecNd<T, const N: usize> {
+    size: [usize; N],
     matrix: Vec<Option<T>>,
 }
 
-impl<T: Clone> Vec2d<T> {
-    fn new(size: (usize, usize)) -> Self {
+type Vec2d<T> = VecNd<T, 2>;
+type Vec3d<T> = VecNd<T, 3>;
+
+impl<T: Clone, const N: usize> VecNd<T, N> {
+    fn new(size: [usize; N]) -> Self {
         Self {
             size,
-            matrix: vec![None; size.0 * size.1],
+            matrix: vec![None; size.iter().product()],
         }
     }
 }
 
-impl<T> Index<(usize, usize)> for Vec2d<T> {
+impl<T, const N: usize> Index<[usize; N]> for VecNd<T, N> {
     type Output = Option<T>;
 
-    fn index(&self, index: (usize, usize)) -> &Self::Output {
-        assert!(
-            index.0 < self.size.0,
-            "{} < {} for index.0",
-            index.0,
-            self.size.0
-        );
-        assert!(
-            index.1 < self.size.1,
-            "{} < {} for index.1",
-            index.1,
-            self.size.1
-        );
-        &self.matrix[index.0 + self.size.0 * index.1]
-    }
-}
-
-impl<T> IndexMut<(usize, usize)> for Vec2d<T> {
-    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
-        assert!(
-            index.0 < self.size.0,
-            "{} < {} for index.0",
-            index.0,
-            self.size.0
-        );
-        assert!(
-            index.1 < self.size.1,
-            "{} < {} for index.1",
-            index.1,
-            self.size.1
-        );
-        &mut self.matrix[index.0 + self.size.0 * index.1]
-    }
-}
-
-struct Vec3d<T> {
-    size: (usize, usize, usize),
-    matrix: Vec<Option<T>>,
-}
-
-impl<T: Clone> Vec3d<T> {
-    fn new(size: (usize, usize, usize)) -> Self {
-        Self {
-            size,
-            matrix: vec![None; size.0 * size.1 * size.2],
+    fn index(&self, index: [usize; N]) -> &Self::Output {
+        for (i, x) in index.iter().enumerate() {
+            assert!(*x < self.size[i], "{x} < {} for index[{i}]", self.size[i]);
         }
+
+        let mut idx = 0;
+        for (i, x) in index.iter().enumerate().rev() {
+            idx *= self.size[i];
+            idx += x;
+        }
+        &self.matrix[idx]
     }
 }
 
-impl<T> Index<(usize, usize, usize)> for Vec3d<T> {
-    type Output = Option<T>;
+impl<T, const N: usize> IndexMut<[usize; N]> for VecNd<T, N> {
+    fn index_mut(&mut self, index: [usize; N]) -> &mut Self::Output {
+        for (i, x) in index.iter().enumerate() {
+            assert!(*x < self.size[i], "{x} < {} for index[{i}]", self.size[i]);
+        }
 
-    fn index(&self, index: (usize, usize, usize)) -> &Self::Output {
-        assert!(
-            index.0 < self.size.0,
-            "{} < {} for index.0",
-            index.0,
-            self.size.0
-        );
-        assert!(
-            index.1 < self.size.1,
-            "{} < {} for index.1",
-            index.1,
-            self.size.1
-        );
-        assert!(
-            index.2 < self.size.2,
-            "{} < {} for index.2",
-            index.2,
-            self.size.2
-        );
-        &self.matrix[index.0 + self.size.0 * (index.1 + self.size.1 * index.2)]
-    }
-}
-
-impl<T> IndexMut<(usize, usize, usize)> for Vec3d<T> {
-    fn index_mut(&mut self, index: (usize, usize, usize)) -> &mut Self::Output {
-        assert!(
-            index.0 < self.size.0,
-            "{} < {} for index.0",
-            index.0,
-            self.size.0
-        );
-        assert!(
-            index.1 < self.size.1,
-            "{} < {} for index.1",
-            index.1,
-            self.size.1
-        );
-        assert!(
-            index.2 < self.size.2,
-            "{} < {} for index.2",
-            index.2,
-            self.size.2
-        );
-        &mut self.matrix[index.0 + self.size.0 * (index.1 + self.size.1 * index.2)]
+        let mut idx = 0;
+        for (i, x) in index.iter().enumerate().rev() {
+            idx *= self.size[i];
+            idx += x;
+        }
+        &mut self.matrix[idx]
     }
 }

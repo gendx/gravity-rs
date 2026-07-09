@@ -25,10 +25,10 @@ struct Memoized<I, T> {
 impl<I: Clone, T: Clone> Memoized<I, T> {
     fn new(rmax: u32, bmax: usize) -> Self {
         Self {
-            weight_poisson: Vec3d::new((70, 70, rmax as usize + 1)),
-            choose: Vec2d::new((rmax as usize + 1, rmax as usize + 1)),
-            binom_power: Vec2d::new((bmax + 1, rmax as usize + 1)),
-            binom_opposite_power: Vec2d::new((bmax + 1, rmax as usize + 1)),
+            weight_poisson: Vec3d::new([70, 70, rmax as usize + 1]),
+            choose: Vec2d::new([rmax as usize + 1, rmax as usize + 1]),
+            binom_power: Vec2d::new([bmax + 1, rmax as usize + 1]),
+            binom_opposite_power: Vec2d::new([bmax + 1, rmax as usize + 1]),
             rmax,
         }
     }
@@ -231,7 +231,7 @@ where
                 .map(|revealed| {
                     // Each term here is scaled by `choose(k, t) * choose(k, t)^r`...
                     &cover_pors_table[revealed]
-                        * size_table[(r as usize, revealed)].as_ref().unwrap()
+                        * size_table[[r as usize, revealed]].as_ref().unwrap()
                 })
                 .sum();
             // ...so we divide by `choose(k, t)^(r + 1)`.
@@ -257,7 +257,7 @@ where
     fn overlap_table(&self, k: u32, t: u32) -> Vec2d<I> {
         let kr_max = (k * self.rmax).min(t);
 
-        let mut table = Vec2d::new((kr_max as usize + 1, k as usize + 1));
+        let mut table = Vec2d::new([kr_max as usize + 1, k as usize + 1]);
         for i in 0..=kr_max {
             let mut sum = I::zero();
             for j in 0..=k {
@@ -269,7 +269,7 @@ where
                 if !value.is_zero() {
                     eprintln!("  overlap[{t}, {k}, {i}, {j}] = {}", value.to_f64_log2());
                 }
-                table[(i as usize, j as usize)] = Some(value);
+                table[[i as usize, j as usize]] = Some(value);
             }
             eprintln!(" overlap[{t}, {k}, {i}] = {}", sum.to_f64_log2());
         }
@@ -287,22 +287,22 @@ where
 
         let overlap_table = self.overlap_table(k, t);
 
-        let mut table = Vec2d::new((self.rmax as usize + 1, kr_max as usize + 1));
+        let mut table = Vec2d::new([self.rmax as usize + 1, kr_max as usize + 1]);
         // Initial case: with zero previous signatures, exactly zero values have been
         // revealed.
-        table[(0, 0)] = Some(I::one());
+        table[[0, 0]] = Some(I::one());
         for i in 1..=kr_max as usize {
-            table[(0, i)] = Some(I::zero());
+            table[[0, i]] = Some(I::zero());
         }
 
         // Other cases by recursion on `r`.
         for r in 1..=self.rmax as usize {
             for i in 0..=kr_max as usize {
-                table[(r, i)] = Some(I::zero());
+                table[[r, i]] = Some(I::zero());
             }
 
             for i in 0..=kr_max as usize {
-                if table[(r - 1, i)].as_ref().unwrap().is_zero() {
+                if table[[r - 1, i]].as_ref().unwrap().is_zero() {
                     continue;
                 }
                 for j in 0..=k as usize {
@@ -312,15 +312,15 @@ where
                     }
                     // Each value in `overlap_table` is scaled by `choose(k, t)`, so this is scaled
                     // by `choose(k, t)^r`.
-                    let p = table[(r - 1, i)].as_ref().unwrap()
-                        * overlap_table[(i, k as usize - j)].as_ref().unwrap();
-                    *table[(r, i + j)].as_mut().unwrap() += p;
+                    let p = table[[r - 1, i]].as_ref().unwrap()
+                        * overlap_table[[i, k as usize - j]].as_ref().unwrap();
+                    *table[[r, i + j]].as_mut().unwrap() += p;
                 }
             }
 
             // For debugging.
             for i in 0..=kr_max as usize {
-                let value = table[(r, i)].as_mut().unwrap();
+                let value = table[[r, i]].as_mut().unwrap();
                 if !value.is_zero() {
                     eprintln!("  size_table[{t}, {k}, {r}, {i}] = {}", value.to_f64_log2());
                 }
@@ -378,7 +378,7 @@ where
     }
 
     fn choose(table: &mut Vec2d<I>, n: u32, among: u32) -> &I {
-        let x = &mut table[(n as usize, among as usize)];
+        let x = &mut table[[n as usize, among as usize]];
         if x.is_none() {
             let value = Self::choose_impl(n, among);
             *x = Some(value);
@@ -393,7 +393,7 @@ where
     /// Returns 2^(-B * r)
     #[expect(non_snake_case)]
     fn binom_power(table: &mut Vec2d<T>, B: u32, r: u32) -> &T {
-        let x = &mut table[(B as usize, r as usize)];
+        let x = &mut table[[B as usize, r as usize]];
         if x.is_none() {
             let value = (T::one() / T::from_log2(B)).powi(r);
             *x = Some(value);
@@ -404,7 +404,7 @@ where
     /// Returns (1 - 2^-B)^r
     #[expect(non_snake_case)]
     fn binom_opposite_power(table: &mut Vec2d<T>, B: u32, r: u32) -> &T {
-        let x = &mut table[(B as usize, r as usize)];
+        let x = &mut table[[B as usize, r as usize]];
         if x.is_none() {
             let value = (T::one() / T::from_log2(B)).one_minus_x().powi(r);
             *x = Some(value);
@@ -415,7 +415,7 @@ where
     /// Probability that a Poisson distribution of parameter `rate = 2^(q - h)`
     /// is equal to `r`.
     fn weight_poisson<'a>(table: &'a mut Vec3d<T>, r: u32, h: u32, q: u32, rate: &T) -> &'a T {
-        let index = (h as usize, q as usize, r as usize);
+        let index = [h as usize, q as usize, r as usize];
         if table[index].is_none() {
             let value = Self::weight_poisson_impl(table, r, h, q, rate);
             table[index] = Some(value);
@@ -779,119 +779,52 @@ impl Rational<BigInt> for BigRational {
     }
 }
 
-struct Vec2d<T> {
-    size: (usize, usize),
+struct VecNd<T, const N: usize> {
+    size: [usize; N],
     matrix: Vec<Option<T>>,
 }
 
-impl<T: Clone> Vec2d<T> {
-    fn new(size: (usize, usize)) -> Self {
+type Vec2d<T> = VecNd<T, 2>;
+type Vec3d<T> = VecNd<T, 3>;
+
+impl<T: Clone, const N: usize> VecNd<T, N> {
+    fn new(size: [usize; N]) -> Self {
         Self {
             size,
-            matrix: vec![None; size.0 * size.1],
+            matrix: vec![None; size.iter().product()],
         }
     }
 }
 
-impl<T> Index<(usize, usize)> for Vec2d<T> {
+impl<T, const N: usize> Index<[usize; N]> for VecNd<T, N> {
     type Output = Option<T>;
 
-    fn index(&self, index: (usize, usize)) -> &Self::Output {
-        assert!(
-            index.0 < self.size.0,
-            "{} < {} for index.0",
-            index.0,
-            self.size.0
-        );
-        assert!(
-            index.1 < self.size.1,
-            "{} < {} for index.1",
-            index.1,
-            self.size.1
-        );
-        &self.matrix[index.0 + self.size.0 * index.1]
-    }
-}
-
-impl<T> IndexMut<(usize, usize)> for Vec2d<T> {
-    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
-        assert!(
-            index.0 < self.size.0,
-            "{} < {} for index.0",
-            index.0,
-            self.size.0
-        );
-        assert!(
-            index.1 < self.size.1,
-            "{} < {} for index.1",
-            index.1,
-            self.size.1
-        );
-        &mut self.matrix[index.0 + self.size.0 * index.1]
-    }
-}
-
-struct Vec3d<T> {
-    size: (usize, usize, usize),
-    matrix: Vec<Option<T>>,
-}
-
-impl<T: Clone> Vec3d<T> {
-    fn new(size: (usize, usize, usize)) -> Self {
-        Self {
-            size,
-            matrix: vec![None; size.0 * size.1 * size.2],
+    fn index(&self, index: [usize; N]) -> &Self::Output {
+        for (i, x) in index.iter().enumerate() {
+            assert!(*x < self.size[i], "{x} < {} for index[{i}]", self.size[i]);
         }
+
+        let mut idx = 0;
+        for (i, x) in index.iter().enumerate().rev() {
+            idx *= self.size[i];
+            idx += x;
+        }
+        &self.matrix[idx]
     }
 }
 
-impl<T> Index<(usize, usize, usize)> for Vec3d<T> {
-    type Output = Option<T>;
+impl<T, const N: usize> IndexMut<[usize; N]> for VecNd<T, N> {
+    fn index_mut(&mut self, index: [usize; N]) -> &mut Self::Output {
+        for (i, x) in index.iter().enumerate() {
+            assert!(*x < self.size[i], "{x} < {} for index[{i}]", self.size[i]);
+        }
 
-    fn index(&self, index: (usize, usize, usize)) -> &Self::Output {
-        assert!(
-            index.0 < self.size.0,
-            "{} < {} for index.0",
-            index.0,
-            self.size.0
-        );
-        assert!(
-            index.1 < self.size.1,
-            "{} < {} for index.1",
-            index.1,
-            self.size.1
-        );
-        assert!(
-            index.2 < self.size.2,
-            "{} < {} for index.2",
-            index.2,
-            self.size.2
-        );
-        &self.matrix[index.0 + self.size.0 * (index.1 + self.size.1 * index.2)]
-    }
-}
-
-impl<T> IndexMut<(usize, usize, usize)> for Vec3d<T> {
-    fn index_mut(&mut self, index: (usize, usize, usize)) -> &mut Self::Output {
-        assert!(
-            index.0 < self.size.0,
-            "{} < {} for index.0",
-            index.0,
-            self.size.0
-        );
-        assert!(
-            index.1 < self.size.1,
-            "{} < {} for index.1",
-            index.1,
-            self.size.1
-        );
-        assert!(
-            index.2 < self.size.2,
-            "{} < {} for index.2",
-            index.2,
-            self.size.2
-        );
-        &mut self.matrix[index.0 + self.size.0 * (index.1 + self.size.1 * index.2)]
+        let mut idx = 0;
+        for (i, x) in index.iter().enumerate().rev() {
+            idx *= self.size[i];
+            idx += x;
+        }
+        &mut self.matrix[idx]
     }
 }
 
