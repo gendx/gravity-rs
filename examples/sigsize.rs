@@ -171,15 +171,17 @@ where
 }
 
 struct MemoizedComplete<T> {
+    zero: T,
     choose: Vec2d<T>,
     choose_h: Vec2d<T>,
     siblings: Vec3d<T>,
     size: Vec3d<T>,
 }
 
-impl<T: Clone> MemoizedComplete<T> {
+impl<T: Arithmetic + Clone> MemoizedComplete<T> {
     fn new(k: usize, h: usize) -> Self {
         Self {
+            zero: T::zero(),
             choose: Vec2d::new([k + 1, k + 1]),
             choose_h: Vec2d::new([k + 1, h + 1]),
             siblings: Vec3d::new([h + 1, k + 1, k + 1]),
@@ -194,15 +196,19 @@ where
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
     fn size(&mut self, h: u32, k: u32, m: u32) -> &T {
-        Self::size_inner(
-            &mut self.size,
-            &mut self.siblings,
-            &mut self.choose,
-            &mut self.choose_h,
-            h,
-            k,
-            m,
-        )
+        if m > h * k {
+            &self.zero
+        } else {
+            Self::size_inner(
+                &mut self.size,
+                &mut self.siblings,
+                &mut self.choose,
+                &mut self.choose_h,
+                h,
+                k,
+                m,
+            )
+        }
     }
 
     fn size_inner<'a>(
@@ -556,5 +562,28 @@ impl<T, const N: usize> IndexMut<[usize; N]> for VecNd<T, N> {
             idx += x;
         }
         &mut self.matrix[idx]
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_complete_distributions_are_full() {
+        for h in 0..=7 {
+            let t = 1 << h;
+            for k in 1..=t {
+                let mut mem: MemoizedComplete<BigRational> =
+                    MemoizedComplete::new(k as usize, h as usize);
+                let mut sum = <BigRational as Arithmetic>::zero();
+                for m in 0..=t {
+                    let p = mem.size(h, k, m);
+                    println!("size(1 << {h}, {k}, {m}) = {p}");
+                    sum += p;
+                }
+                assert_eq!(sum, BigRational::one(), "sum(1 << {h}, {k}) = {sum} != 1");
+            }
+        }
     }
 }
