@@ -13,10 +13,12 @@ jobs:
 
       - name: Generate code coverage
         run: cargo llvm-cov --verbose --release --workspace --lcov --output-path lcov.info
+      - name: Generate code coverage (examples)
+        run: cargo llvm-cov --verbose --release --examples --workspace --lcov --output-path lcov-examples.info
       - name: Upload to Codecov
         uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: lcov.info
+          files: lcov.info,lcov-examples.info
           verbose: true
           fail_ci_if_error: true
