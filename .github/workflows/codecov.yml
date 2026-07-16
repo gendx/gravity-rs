@@ -14,7 +14,7 @@ jobs:
       - name: Generate code coverage
         run: cargo llvm-cov --verbose --release --workspace --lcov --output-path lcov.info
       - name: Generate code coverage (examples)
-        run: cargo llvm-cov --verbose --release --examples --workspace --lcov --output-path lcov-examples.info
+        run: cargo llvm-cov --verbose --release --examples --workspace --lcov --output-path lcov-examples.info --no-default-ignore-filename-regex --ignore-filename-regex '/rustc/([0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+)/|^/home/runner/work/gravity\-rs/gravity\-rs(/.*)?/(tests|benches)/|^/home/runner/work/gravity\-rs/gravity\-rs(/.*)?/(tests\.rs|[0-9a-zA-Z_-]+[_-]tests\.rs)$|^/home/runner/work/gravity\-rs/gravity\-rs/target/llvm\-cov\-target($|/)|^/home/runner/\.cargo/(registry|git)/|^/home/runner/\.rustup/toolchains($|/)'
       - name: Upload to Codecov
         uses: codecov/codecov-action@v6
         with:
