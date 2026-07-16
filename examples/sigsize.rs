@@ -4,64 +4,64 @@ use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Index, IndexMut, Mul, MulAssign};
 
 fn main() {
-    octopus_size_distribution::<F64Log2>(16, 24);
+    octopus_size_complete_distribution::<F64Log2>(16, 24);
     println!("****************************************");
-    octopus_size_distribution::<F64Log2>(16, 32);
+    octopus_size_complete_distribution::<F64Log2>(16, 32);
     println!("****************************************");
-    octopus_size_distribution::<F64Log2>(16, 28);
-    println!("****************************************");
-
-    octopus_size_distribution::<F64Log2>(16, 14);
-    println!("****************************************");
-    octopus_size_distribution::<F64Log2>(25, 9);
+    octopus_size_complete_distribution::<F64Log2>(16, 28);
     println!("****************************************");
 
-    octopus_size_distribution::<BigRational>(16, 24);
+    octopus_size_complete_distribution::<F64Log2>(16, 14);
     println!("****************************************");
-    octopus_size_distribution::<BigRational>(16, 32);
-    println!("****************************************");
-    octopus_size_distribution::<BigRational>(16, 28);
+    octopus_size_complete_distribution::<F64Log2>(25, 9);
     println!("****************************************");
 
-    octopus_size_distribution::<BigRational>(16, 14);
+    octopus_size_complete_distribution::<BigRational>(16, 24);
     println!("****************************************");
-    octopus_size_distribution::<BigRational>(25, 9);
+    octopus_size_complete_distribution::<BigRational>(16, 32);
     println!("****************************************");
-
-    octopus_size_cutoff::<F64Log2>(16, 24, -10.0);
-    octopus_size_cutoff::<F64Log2>(16, 32, -14.0);
-    octopus_size_cutoff::<F64Log2>(16, 28, -12.0);
-
-    octopus_size_cutoff::<F64Log2>(16, 14, -12.0);
-    octopus_size_cutoff::<F64Log2>(25, 9, -20.0);
-
-    octopus_size_cutoff::<BigRational>(16, 24, -10.0);
-    octopus_size_cutoff::<BigRational>(16, 32, -14.0);
-    octopus_size_cutoff::<BigRational>(16, 28, -12.0);
-
-    octopus_size_cutoff::<BigRational>(16, 14, -12.0);
-    octopus_size_cutoff::<BigRational>(25, 9, -20.0);
-
-    octopus_size_bpors_distribution::<F64Log2>(7, 5, 1, 8);
-    println!("****************************************");
-    octopus_size_bpors_distribution::<F64Log2>(7, 5, 8, 6);
+    octopus_size_complete_distribution::<BigRational>(16, 28);
     println!("****************************************");
 
-    octopus_size_bpors_distribution::<BigRational>(7, 5, 1, 8);
+    octopus_size_complete_distribution::<BigRational>(16, 14);
     println!("****************************************");
-    octopus_size_bpors_distribution::<BigRational>(7, 5, 8, 6);
+    octopus_size_complete_distribution::<BigRational>(25, 9);
+    println!("****************************************");
+
+    octopus_size_complete_cutoff::<F64Log2>(16, 24, -10.0);
+    octopus_size_complete_cutoff::<F64Log2>(16, 32, -14.0);
+    octopus_size_complete_cutoff::<F64Log2>(16, 28, -12.0);
+
+    octopus_size_complete_cutoff::<F64Log2>(16, 14, -12.0);
+    octopus_size_complete_cutoff::<F64Log2>(25, 9, -20.0);
+
+    octopus_size_complete_cutoff::<BigRational>(16, 24, -10.0);
+    octopus_size_complete_cutoff::<BigRational>(16, 32, -14.0);
+    octopus_size_complete_cutoff::<BigRational>(16, 28, -12.0);
+
+    octopus_size_complete_cutoff::<BigRational>(16, 14, -12.0);
+    octopus_size_complete_cutoff::<BigRational>(25, 9, -20.0);
+
+    octopus_size_bpors_complete_distribution::<F64Log2>(7, 5, 1, 8);
+    println!("****************************************");
+    octopus_size_bpors_complete_distribution::<F64Log2>(7, 5, 8, 6);
+    println!("****************************************");
+
+    octopus_size_bpors_complete_distribution::<BigRational>(7, 5, 1, 8);
+    println!("****************************************");
+    octopus_size_bpors_complete_distribution::<BigRational>(7, 5, 8, 6);
     println!("****************************************");
 }
 
 /// Computes the size distribution of a bucketized PORS Octopus (BPORS) as
 /// described in https://eprint.iacr.org/2026/1328.
 #[expect(non_snake_case)]
-fn octopus_size_bpors_distribution<T>(h: u32, k: u32, B: u32, K: u32)
+fn octopus_size_bpors_complete_distribution<T>(h: u32, k: u32, B: u32, K: u32)
 where
     T: Arithmetic + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
-    let mut mem: Memoized<T> = Memoized::new(k as usize, h as usize);
+    let mut mem: MemoizedComplete<T> = MemoizedComplete::new(k as usize, h as usize);
 
     let mut baseline = Vec::new();
     for m in 0..=k * h {
@@ -125,14 +125,14 @@ where
     product
 }
 
-/// Computes the size distribution of a PORS Octopus as described in
-/// https://eprint.iacr.org/2025/2069.
-fn octopus_size_distribution<T>(h: u32, k: u32)
+/// Computes the size distribution of a PORS Octopus in a complete Merkle tree
+/// of height `h` as described in https://eprint.iacr.org/2025/2069.
+fn octopus_size_complete_distribution<T>(h: u32, k: u32)
 where
     T: Arithmetic + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
-    let mut mem: Memoized<T> = Memoized::new(k as usize, h as usize);
+    let mut mem: MemoizedComplete<T> = MemoizedComplete::new(k as usize, h as usize);
 
     let mut sum = T::zero();
     for m in 0..=k * h {
@@ -148,12 +148,12 @@ where
     }
 }
 
-fn octopus_size_cutoff<T>(h: u32, k: u32, threshold: f64)
+fn octopus_size_complete_cutoff<T>(h: u32, k: u32, threshold: f64)
 where
     T: Arithmetic + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
-    let mut mem: Memoized<T> = Memoized::new(k as usize, h as usize);
+    let mut mem: MemoizedComplete<T> = MemoizedComplete::new(k as usize, h as usize);
 
     let mut sum = T::zero();
     for m in 0..=k * h {
@@ -170,14 +170,14 @@ where
     }
 }
 
-struct Memoized<T> {
+struct MemoizedComplete<T> {
     choose: Vec2d<T>,
     choose_h: Vec2d<T>,
     siblings: Vec3d<T>,
     size: Vec3d<T>,
 }
 
-impl<T: Clone> Memoized<T> {
+impl<T: Clone> MemoizedComplete<T> {
     fn new(k: usize, h: usize) -> Self {
         Self {
             choose: Vec2d::new([k + 1, k + 1]),
@@ -188,7 +188,7 @@ impl<T: Clone> Memoized<T> {
     }
 }
 
-impl<T> Memoized<T>
+impl<T> MemoizedComplete<T>
 where
     T: Arithmetic,
     for<'a> &'a T: Mul<&'a T, Output = T>,
