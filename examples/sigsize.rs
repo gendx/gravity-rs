@@ -337,7 +337,7 @@ where
     fn choose(table: &mut Table2d<T>, n: u32, among: u32) -> &T {
         let x = &mut table[[n as usize, among as usize]];
         if x.is_none() {
-            let value = Self::choose_impl(n, among);
+            let value = choose_impl(n, among);
             *x = Some(value);
         }
         x.as_ref().unwrap()
@@ -346,22 +346,22 @@ where
     fn choose_h(table: &mut Table2d<T>, n: u32, among_h: u32) -> &T {
         let x = &mut table[[n as usize, among_h as usize]];
         if x.is_none() {
-            let value = Self::choose_impl(n, 1 << among_h);
+            let value = choose_impl(n, 1 << among_h);
             *x = Some(value);
         }
         x.as_ref().unwrap()
     }
+}
 
-    fn choose_impl(n: u32, among: u32) -> T {
-        if n > among {
-            return T::zero();
-        }
-        let mut res = T::one();
-        for i in 0..n {
-            res *= T::from(among - i) / T::from(i + 1);
-        }
-        res
+fn choose_impl<T: Arithmetic>(n: u32, among: u32) -> T {
+    if n > among {
+        return T::zero();
     }
+    let mut res = T::one();
+    for i in 0..n {
+        res *= T::from(among - i) / T::from(i + 1);
+    }
+    res
 }
 
 trait Arithmetic:
