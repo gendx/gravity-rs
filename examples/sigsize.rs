@@ -1,7 +1,7 @@
 use num::{BigInt, BigRational, ToPrimitive, Zero};
 use std::fmt::Debug;
 use std::iter::Sum;
-use std::ops::{Add, AddAssign, Div, Index, IndexMut, Mul, MulAssign};
+use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
 
 fn main() {
     octopus_size_complete_distribution::<F64Log2>(16, 24);
@@ -172,20 +172,20 @@ where
 
 struct MemoizedComplete<T> {
     zero: T,
-    choose: Vec2d<T>,
-    choose_h: Vec2d<T>,
-    siblings: Vec3d<T>,
-    size: Vec3d<T>,
+    choose: Table2d<T>,
+    choose_h: Table2d<T>,
+    siblings: Table3d<T>,
+    size: Table3d<T>,
 }
 
 impl<T: Arithmetic + Clone> MemoizedComplete<T> {
     fn new(k: usize, h: usize) -> Self {
         Self {
             zero: T::zero(),
-            choose: Vec2d::new([k + 1, k + 1]),
-            choose_h: Vec2d::new([k + 1, h + 1]),
-            siblings: Vec3d::new([h + 1, k + 1, k + 1]),
-            size: Vec3d::new([h + 1, k + 1, k * h + 1]),
+            choose: Table2d::new([k + 1, k + 1]),
+            choose_h: Table2d::new([k + 1, h + 1]),
+            siblings: Table3d::new([h + 1, k + 1, k + 1]),
+            size: Table3d::new([h + 1, k + 1, k * h + 1]),
         }
     }
 }
@@ -212,10 +212,10 @@ where
     }
 
     fn size_inner<'a>(
-        size_table: &'a mut Vec3d<T>,
-        siblings_table: &mut Vec3d<T>,
-        choose_table: &mut Vec2d<T>,
-        choose_h_table: &mut Vec2d<T>,
+        size_table: &'a mut Table3d<T>,
+        siblings_table: &mut Table3d<T>,
+        choose_table: &mut Table2d<T>,
+        choose_h_table: &mut Table2d<T>,
         h: u32,
         k: u32,
         m: u32,
@@ -237,10 +237,10 @@ where
     }
 
     fn size_impl(
-        size_table: &mut Vec3d<T>,
-        siblings_table: &mut Vec3d<T>,
-        choose_table: &mut Vec2d<T>,
-        choose_h_table: &mut Vec2d<T>,
+        size_table: &mut Table3d<T>,
+        siblings_table: &mut Table3d<T>,
+        choose_table: &mut Table2d<T>,
+        choose_h_table: &mut Table2d<T>,
         h: u32,
         k: u32,
         m: u32,
@@ -279,9 +279,9 @@ where
     }
 
     fn siblings_inner<'a>(
-        siblings_table: &'a mut Vec3d<T>,
-        choose_table: &mut Vec2d<T>,
-        choose_h_table: &mut Vec2d<T>,
+        siblings_table: &'a mut Table3d<T>,
+        choose_table: &mut Table2d<T>,
+        choose_h_table: &mut Table2d<T>,
         h: u32,
         k: u32,
         s: u32,
@@ -295,8 +295,8 @@ where
     }
 
     fn siblings_impl(
-        choose_table: &mut Vec2d<T>,
-        choose_h_table: &mut Vec2d<T>,
+        choose_table: &mut Table2d<T>,
+        choose_h_table: &mut Table2d<T>,
         h: u32,
         k: u32,
         s: u32,
@@ -311,7 +311,7 @@ where
         }
     }
 
-    fn choose(table: &mut Vec2d<T>, n: u32, among: u32) -> &T {
+    fn choose(table: &mut Table2d<T>, n: u32, among: u32) -> &T {
         let x = &mut table[[n as usize, among as usize]];
         if x.is_none() {
             let value = Self::choose_impl(n, among);
@@ -320,7 +320,7 @@ where
         x.as_ref().unwrap()
     }
 
-    fn choose_h(table: &mut Vec2d<T>, n: u32, among_h: u32) -> &T {
+    fn choose_h(table: &mut Table2d<T>, n: u32, among_h: u32) -> &T {
         let x = &mut table[[n as usize, among_h as usize]];
         if x.is_none() {
             let value = Self::choose_impl(n, 1 << among_h);
@@ -516,54 +516,8 @@ impl Arithmetic for BigRational {
     }
 }
 
-struct VecNd<T, const N: usize> {
-    size: [usize; N],
-    matrix: Vec<Option<T>>,
-}
-
-type Vec2d<T> = VecNd<T, 2>;
-type Vec3d<T> = VecNd<T, 3>;
-
-impl<T: Clone, const N: usize> VecNd<T, N> {
-    fn new(size: [usize; N]) -> Self {
-        Self {
-            size,
-            matrix: vec![None; size.iter().product()],
-        }
-    }
-}
-
-impl<T, const N: usize> Index<[usize; N]> for VecNd<T, N> {
-    type Output = Option<T>;
-
-    fn index(&self, index: [usize; N]) -> &Self::Output {
-        for (i, x) in index.iter().enumerate() {
-            assert!(*x < self.size[i], "{x} < {} for index[{i}]", self.size[i]);
-        }
-
-        let mut idx = 0;
-        for (i, x) in index.iter().enumerate().rev() {
-            idx *= self.size[i];
-            idx += x;
-        }
-        &self.matrix[idx]
-    }
-}
-
-impl<T, const N: usize> IndexMut<[usize; N]> for VecNd<T, N> {
-    fn index_mut(&mut self, index: [usize; N]) -> &mut Self::Output {
-        for (i, x) in index.iter().enumerate() {
-            assert!(*x < self.size[i], "{x} < {} for index[{i}]", self.size[i]);
-        }
-
-        let mut idx = 0;
-        for (i, x) in index.iter().enumerate().rev() {
-            idx *= self.size[i];
-            idx += x;
-        }
-        &mut self.matrix[idx]
-    }
-}
+type Table2d<T> = ndtable::Table2d<Option<T>>;
+type Table3d<T> = ndtable::Table3d<Option<T>>;
 
 #[cfg(test)]
 mod test {
