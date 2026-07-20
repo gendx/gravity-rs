@@ -64,14 +64,23 @@ where
     let mut mem: MemoizedComplete<T> = MemoizedComplete::new(k as usize, h as usize);
 
     let mut baseline = Vec::new();
+    let mut sum = T::zero();
     for m in 0..=k * h {
         let p = mem.size(h, k, m);
+        sum += p;
         if !p.is_zero() {
-            println!("base size({h}, {k}, {m}) = {}", p.to_f64_log2(),);
+            println!(
+                "base size(2^{h}, {k}, {m}) = 2^{} | 2^{} | {}",
+                p.to_f64_log2(),
+                sum.to_f64_log2(),
+                sum.to_f64(),
+            );
             baseline.resize_with(m as usize, T::zero);
             baseline.push(p.clone());
         }
     }
+
+    mem.debug();
 
     let distribution = convoluted_exponent(&baseline, K);
     let mut sum = T::zero();
@@ -80,7 +89,8 @@ where
         sum += p;
         if !p.is_zero() {
             println!(
-                "product size({h}, {k}, {K}, {m}) = {} | {} | {}",
+                "product size(2^{h}, {k}, {K}, {m}, {}) = 2^{} | 2^{} | {}",
+                m + k * K,
                 p.to_f64_log2(),
                 sum.to_f64_log2(),
                 sum.to_f64()
@@ -140,12 +150,16 @@ where
         sum += p;
         if !p.is_zero() {
             println!(
-                "size({h}, {k}, {m}) = {} | {}",
+                "size(2^{h}, {k}, {m}, {}) = 2^{} | 2^{} | {}",
+                m + k,
                 p.to_f64_log2(),
-                sum.to_f64_log2()
+                sum.to_f64_log2(),
+                sum.to_f64(),
             );
         }
     }
+
+    mem.debug();
 }
 
 fn octopus_size_complete_cutoff<T>(h: u32, k: u32, threshold: f64)
@@ -161,13 +175,15 @@ where
         sum += p;
         if sum.to_f64_log2() >= threshold {
             println!(
-                "P(size({h}, {k}) <= {m}) = 2^{} | {}",
+                "P(size(2^{h}, {k}) <= {m}) = 2^{} | {}",
                 sum.to_f64_log2(),
                 sum.to_f64()
             );
             break;
         }
     }
+
+    mem.debug();
 }
 
 struct MemoizedComplete<T> {
@@ -187,6 +203,13 @@ impl<T: Arithmetic + Clone> MemoizedComplete<T> {
             siblings: Table3d::new([h + 1, k + 1, k + 1]),
             size: Table3d::new([h + 1, k + 1, k * h + 1]),
         }
+    }
+
+    fn debug(&self) {
+        debug_table(&self.choose, "choose");
+        debug_table(&self.choose_h, "choose_h");
+        debug_table(&self.siblings, "siblings");
+        debug_table(&self.size, "size");
     }
 }
 
@@ -519,6 +542,16 @@ impl Arithmetic for BigRational {
 type Table2d<T> = ndtable::Table2d<Option<T>>;
 type Table3d<T> = ndtable::Table3d<Option<T>>;
 
+fn debug_table<T, const N: usize>(table: &ndtable::TableNd<Option<T>, N>, title: &str) {
+    eprintln!(
+        "cache({title}) = {} ({:.02}%) / {} = {:?}",
+        table.len(),
+        100.0 * table.len() as f64 / table.capacity() as f64,
+        table.capacity(),
+        table.size(),
+    );
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -533,10 +566,10 @@ mod test {
                 let mut sum = <BigRational as Arithmetic>::zero();
                 for m in 0..=t {
                     let p = mem.size(h, k, m);
-                    println!("size(1 << {h}, {k}, {m}) = {p}");
+                    println!("size(2^{h}, {k}, {m}) = {p}");
                     sum += p;
                 }
-                assert_eq!(sum, BigRational::one(), "sum(1 << {h}, {k}) = {sum} != 1");
+                assert_eq!(sum, BigRational::one(), "sum(2^{h}, {k}) = {sum} != 1");
             }
         }
     }
