@@ -124,8 +124,8 @@ where
     }
 
     /// Returns an upper bound of the success probability of an attacker making
-    /// `2^q` queries against a FORS construction with `k` trees of height
-    /// `t`, on a hyper-tree of height `h`.
+    /// `2^q` queries against a FORS construction with `k` trees of height `t`,
+    /// on a hyper-tree of height `h`.
     ///
     /// See https://sphincs.org/data/sphincs+-r3.1-specification.pdf.
     fn fors(&mut self, k: u32, t: u32, h: u32, q: u32) -> T {
@@ -206,9 +206,9 @@ where
     /// `t`, on a hyper-tree of height `h`.
     ///
     /// Contrary to [`Self::pors`], this version doesn't bound the number of
-    /// revealed values after `r` signatures as `k * r`, but rather computes
-    /// the exact distribution, assuming all signatures sample the `k`
-    /// values uniformly (i.e. using vanilla PORS without forced pruning).
+    /// revealed values after `r` signatures as `k * r`, but rather computes the
+    /// exact distribution, assuming all signatures sample the `k` values
+    /// uniformly (i.e. using vanilla PORS without forced pruning).
     ///
     /// See https://eprint.iacr.org/2017/909.
     fn pors_precise(&mut self, k: u32, t: u32, h: u32, q: u32) -> T {
@@ -277,9 +277,9 @@ where
     }
 
     /// Returns a probability table where `table[(r, i)]` contains the
-    /// probability that after `r` signatures following the PORS
-    /// construction (i.e. `r` samples each containing `k` distinct uniform
-    /// values among `0..t`) the number of revealed values is `i`.
+    /// probability that after `r` signatures following the PORS construction
+    /// (i.e. `r` samples each containing `k` distinct uniform values among
+    /// `0..t`) the number of revealed values is `i`.
     ///
     /// Each value is scaled by `choose(k, t)^r`.
     fn pors_size_table(&self, k: u32, t: u32) -> Table2d<I> {
