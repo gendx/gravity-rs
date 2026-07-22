@@ -486,9 +486,12 @@ impl<T: Clone> Memoized<T> {
     fn new(k: usize, t: usize) -> Self {
         let h = t.ilog2() as usize;
         Self {
-            choose: SparseTable2d::new([k + 1, t + 1]),
-            siblings: SparseTable3d::new([t + 1, k + 1, k + 1]),
-            size: SparseTable5d::new([h + 1, k + 1, k + 1, 3, (k * (h + 1)).min(t) + 1]),
+            choose: SparseTable2d::with_hasher([k + 1, t + 1], Default::default()),
+            siblings: SparseTable3d::with_hasher([t + 1, k + 1, k + 1], Default::default()),
+            size: SparseTable5d::with_hasher(
+                [h + 1, k + 1, k + 1, 3, (k * (h + 1)).min(t) + 1],
+                Default::default(),
+            ),
         }
     }
 
@@ -1184,9 +1187,9 @@ impl Arithmetic for BigRational {
 type Table2d<T> = ndtable::Table2d<Option<T>>;
 type Table3d<T> = ndtable::Table3d<Option<T>>;
 
-type SparseTable2d<T> = ndtable::SparseTable2d<T>;
-type SparseTable3d<T> = ndtable::SparseTable3d<T>;
-type SparseTable5d<T> = ndtable::SparseTable5d<T>;
+type SparseTable2d<T> = ndtable::SparseTable2d<T, rustc_hash::FxBuildHasher>;
+type SparseTable3d<T> = ndtable::SparseTable3d<T, rustc_hash::FxBuildHasher>;
+type SparseTable5d<T> = ndtable::SparseTable5d<T, rustc_hash::FxBuildHasher>;
 
 fn debug_table<T, const N: usize>(table: &ndtable::TableNd<Option<T>, N>, title: &str) {
     eprintln!(
@@ -1198,7 +1201,7 @@ fn debug_table<T, const N: usize>(table: &ndtable::TableNd<Option<T>, N>, title:
     );
 }
 
-fn debug_sparse_table<T, const N: usize>(table: &ndtable::SparseTableNd<T, N>, title: &str) {
+fn debug_sparse_table<T, const N: usize, S>(table: &ndtable::SparseTableNd<T, N, S>, title: &str) {
     eprintln!(
         "cache({title}) = {} ({:.02}%) / {} = {:?}",
         table.len(),
