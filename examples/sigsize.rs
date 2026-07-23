@@ -1,4 +1,5 @@
 use num::{BigInt, BigRational, ToPrimitive, Zero};
+use smart_big_rational::{Denom, SmartBigRational};
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
@@ -6,7 +7,7 @@ use std::time::Instant;
 
 fn main() {
     evaluate::<F64Log2>();
-    evaluate::<BigRational>();
+    evaluate::<SmartBigRational>();
 }
 
 fn evaluate<T>()
@@ -207,6 +208,7 @@ where
             product[i + j] += x * y;
         }
     }
+    product.iter_mut().for_each(|x| x.reduce());
     product
 }
 
@@ -390,7 +392,7 @@ where
                 k,
                 m,
             );
-            size_table[index] = Some(value);
+            size_table[index] = Some(value.reduced());
         }
         size_table[index].as_ref().unwrap()
     }
@@ -448,7 +450,7 @@ where
         let index = [h as usize, k as usize, s as usize];
         if siblings_table[index].is_none() {
             let value = Self::siblings_impl(choose_table, choose_h_table, h, k, s);
-            siblings_table[index] = Some(value);
+            siblings_table[index] = Some(value.reduced());
         }
         siblings_table[index].as_ref().unwrap()
     }
@@ -473,8 +475,8 @@ where
     fn choose(table: &mut Table2d<T>, n: u32, among: u32) -> &T {
         let x = &mut table[[n as usize, among as usize]];
         if x.is_none() {
-            let value = choose_impl(n, among);
-            *x = Some(value);
+            let value: T = choose_impl(n, among);
+            *x = Some(value.reduced());
         }
         x.as_ref().unwrap()
     }
@@ -482,8 +484,8 @@ where
     fn choose_h(table: &mut Table2d<T>, n: u32, among_h: u32) -> &T {
         let x = &mut table[[n as usize, among_h as usize]];
         if x.is_none() {
-            let value = choose_impl(n, 1 << among_h);
-            *x = Some(value);
+            let value: T = choose_impl(n, 1 << among_h);
+            *x = Some(value.reduced());
         }
         x.as_ref().unwrap()
     }
@@ -609,7 +611,7 @@ where
                 c,
                 m,
             );
-            return size_table.entry(index).or_insert(value);
+            return size_table.entry(index).or_insert(value.reduced());
         }
         size_table.get(index).unwrap()
     }
@@ -976,7 +978,7 @@ where
         let index = [x as usize, k as usize, s as usize];
         siblings_table
             .entry(index)
-            .or_insert_with(|| Self::siblings_impl(choose_table, x, k, s))
+            .or_insert_with(|| Self::siblings_impl(choose_table, x, k, s).reduced())
     }
 
     fn siblings_impl(choose_table: &mut SparseTable2d<T>, x: u32, k: u32, s: u32) -> T {
@@ -993,7 +995,9 @@ where
 
     fn choose(table: &mut SparseTable2d<T>, n: u32, among: u32) -> &T {
         let index = [n as usize, among as usize];
-        table.entry(index).or_insert_with(|| choose_impl(n, among))
+        table
+            .entry(index)
+            .or_insert_with(|| choose_impl::<T>(n, among).reduced())
     }
 }
 
@@ -1036,6 +1040,13 @@ trait Arithmetic:
     fn to_f64(&self) -> f64;
 
     fn to_f64_log2(&self) -> f64;
+
+    fn reduce(&mut self) {}
+
+    fn reduced(mut self) -> Self {
+        self.reduce();
+        self
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1194,6 +1205,40 @@ impl Arithmetic for BigRational {
 
     fn to_f64_log2(&self) -> f64 {
         Arithmetic::to_f64(self).log2()
+    }
+}
+
+impl Arithmetic for SmartBigRational {
+    fn zero() -> Self {
+        SmartBigRational::ZERO
+    }
+
+    fn one() -> Self {
+        SmartBigRational::ONE
+    }
+
+    fn is_zero(&self) -> bool {
+        Zero::is_zero(self)
+    }
+
+    fn from(x: u32) -> Self {
+        SmartBigRational::ratio(x, Denom::ONE)
+    }
+
+    fn from_log2(x: u32) -> Self {
+        SmartBigRational::ratio(BigInt::from(1) << x, Denom::ONE)
+    }
+
+    fn to_f64(&self) -> f64 {
+        Arithmetic::to_f64(&self.to_big_rational())
+    }
+
+    fn to_f64_log2(&self) -> f64 {
+        self.to_f64().log2()
+    }
+
+    fn reduce(&mut self) {
+        self.reduce();
     }
 }
 
