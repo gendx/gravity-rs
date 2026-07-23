@@ -493,6 +493,7 @@ where
 
 struct Memoized<T> {
     choose: SparseTable2d<T>,
+    choose_inv: SparseTable2d<T>,
     siblings: SparseTable3d<T>,
     size: SparseTable5d<T>,
 }
@@ -502,6 +503,7 @@ impl<T: Clone> Memoized<T> {
         let h = t.ilog2() as usize;
         Self {
             choose: SparseTable2d::with_hasher([k + 1, t + 1], Default::default()),
+            choose_inv: SparseTable2d::with_hasher([k + 1, t + 1], Default::default()),
             siblings: SparseTable3d::with_hasher([t + 1, k + 1, k + 1], Default::default()),
             size: SparseTable5d::with_hasher(
                 [h + 1, k + 1, k + 1, 3, (k * (h + 1)).min(t) + 1],
@@ -512,6 +514,7 @@ impl<T: Clone> Memoized<T> {
 
     fn debug(&self) {
         debug_sparse_table(&self.choose, "choose");
+        debug_sparse_table(&self.choose_inv, "choose_inv");
         debug_sparse_table(&self.siblings, "siblings");
         debug_sparse_table(&self.size, "size");
     }
@@ -557,6 +560,7 @@ where
                                 &mut self.size,
                                 &mut self.siblings,
                                 &mut self.choose,
+                                &mut self.choose_inv,
                                 h - 1,
                                 l,
                                 r,
@@ -564,7 +568,14 @@ where
                                 k - j,
                                 0,
                                 m + 2 * s - j,
-                            ) * Self::siblings_inner(&mut self.siblings, &mut self.choose, x, j, s)
+                            ) * Self::siblings_inner(
+                                &mut self.siblings,
+                                &mut self.choose,
+                                &mut self.choose_inv,
+                                x,
+                                j,
+                                s,
+                            )
                         }
                     })
                     .sum::<T>();
@@ -572,7 +583,7 @@ where
                     * Self::choose(&mut self.choose, k - j, t - x)
             })
             .sum::<T>();
-        sum / Self::choose(&mut self.choose, k, t)
+        sum * Self::choose_inv(&mut self.choose_inv, k, t)
     }
 
     #[expect(clippy::too_many_arguments)]
@@ -580,6 +591,7 @@ where
         size_table: &'a mut SparseTable5d<T>,
         siblings_table: &mut SparseTable3d<T>,
         choose_table: &mut SparseTable2d<T>,
+        choose_inv_table: &mut SparseTable2d<T>,
         h: u32,
         l: u32,
         r: u32,
@@ -603,6 +615,7 @@ where
                 size_table,
                 siblings_table,
                 choose_table,
+                choose_inv_table,
                 h,
                 l,
                 r,
@@ -622,6 +635,7 @@ where
         size_table: &mut SparseTable5d<T>,
         siblings_table: &mut SparseTable3d<T>,
         choose_table: &mut SparseTable2d<T>,
+        choose_inv_table: &mut SparseTable2d<T>,
         h: u32,
         l: u32,
         r: u32,
@@ -638,6 +652,7 @@ where
                 size_table,
                 siblings_table,
                 choose_table,
+                choose_inv_table,
                 h,
                 l,
                 r,
@@ -651,6 +666,7 @@ where
                 size_table,
                 siblings_table,
                 choose_table,
+                choose_inv_table,
                 h,
                 l,
                 r,
@@ -668,6 +684,7 @@ where
         size_table: &mut SparseTable5d<T>,
         siblings_table: &mut SparseTable3d<T>,
         choose_table: &mut SparseTable2d<T>,
+        choose_inv_table: &mut SparseTable2d<T>,
         h: u32,
         l: u32,
         r: u32,
@@ -691,6 +708,7 @@ where
                                     size_table,
                                     siblings_table,
                                     choose_table,
+                                    choose_inv_table,
                                     h - 1,
                                     ll,
                                     rr,
@@ -698,11 +716,25 @@ where
                                     kr - sr,
                                     0,
                                     m + 2 * (sl + sr) - (kl + kr),
-                                ) * Self::siblings_inner(siblings_table, choose_table, r, kr, sr)
+                                ) * Self::siblings_inner(
+                                    siblings_table,
+                                    choose_table,
+                                    choose_inv_table,
+                                    r,
+                                    kr,
+                                    sr,
+                                )
                             }
                         })
                         .sum::<T>();
-                    sum * Self::siblings_inner(siblings_table, choose_table, l, kl, sl)
+                    sum * Self::siblings_inner(
+                        siblings_table,
+                        choose_table,
+                        choose_inv_table,
+                        l,
+                        kl,
+                        sl,
+                    )
                 })
                 .sum(),
             1 => {
@@ -724,6 +756,7 @@ where
                                                 size_table,
                                                 siblings_table,
                                                 choose_table,
+                                                choose_inv_table,
                                                 h - 1,
                                                 ll,
                                                 rr,
@@ -734,6 +767,7 @@ where
                                             ) * Self::siblings_inner(
                                                 siblings_table,
                                                 choose_table,
+                                                choose_inv_table,
                                                 r - 2,
                                                 kr - 1 - y,
                                                 srr,
@@ -744,10 +778,17 @@ where
                                 sum * Self::choose(choose_table, kr - 1 - y, r - 2)
                             })
                             .sum::<T>();
-                        sum * Self::siblings_inner(siblings_table, choose_table, l, kl, sl)
+                        sum * Self::siblings_inner(
+                            siblings_table,
+                            choose_table,
+                            choose_inv_table,
+                            l,
+                            kl,
+                            sl,
+                        )
                     })
                     .sum::<T>();
-                sum / Self::choose(choose_table, kr - 1, r - 1)
+                sum * Self::choose_inv(choose_inv_table, kr - 1, r - 1)
             }
             -1 => {
                 if kr >= r {
@@ -767,6 +808,7 @@ where
                                                 size_table,
                                                 siblings_table,
                                                 choose_table,
+                                                choose_inv_table,
                                                 h - 1,
                                                 ll,
                                                 rr,
@@ -777,6 +819,7 @@ where
                                             ) * Self::siblings_inner(
                                                 siblings_table,
                                                 choose_table,
+                                                choose_inv_table,
                                                 r - 2,
                                                 kr - y,
                                                 sr,
@@ -787,10 +830,17 @@ where
                                 sum * Self::choose(choose_table, kr - y, r - 2)
                             })
                             .sum::<T>();
-                        sum * Self::siblings_inner(siblings_table, choose_table, l, kl, sl)
+                        sum * Self::siblings_inner(
+                            siblings_table,
+                            choose_table,
+                            choose_inv_table,
+                            l,
+                            kl,
+                            sl,
+                        )
                     })
                     .sum::<T>();
-                sum / Self::choose(choose_table, kr, r - 1)
+                sum * Self::choose_inv(choose_inv_table, kr, r - 1)
             }
             _ => panic!("Invalid value for c = {c}"),
         }
@@ -802,6 +852,7 @@ where
         size_table: &mut SparseTable5d<T>,
         siblings_table: &mut SparseTable3d<T>,
         choose_table: &mut SparseTable2d<T>,
+        choose_inv_table: &mut SparseTable2d<T>,
         h: u32,
         l: u32,
         r: u32,
@@ -839,6 +890,7 @@ where
                                                         size_table,
                                                         siblings_table,
                                                         choose_table,
+                                                        choose_inv_table,
                                                         h - 1,
                                                         ll,
                                                         rr,
@@ -849,6 +901,7 @@ where
                                                     ) * Self::siblings_inner(
                                                         siblings_table,
                                                         choose_table,
+                                                        choose_inv_table,
                                                         r - 1,
                                                         kr - xr,
                                                         sr,
@@ -859,6 +912,7 @@ where
                                         sum * Self::siblings_inner(
                                             siblings_table,
                                             choose_table,
+                                            choose_inv_table,
                                             l - 1,
                                             kl - xl,
                                             sl,
@@ -871,7 +925,8 @@ where
                         sum * Self::choose(choose_table, kl - xl, l - 1)
                     })
                     .sum::<T>();
-                sum / Self::choose(choose_table, kl, l) / Self::choose(choose_table, kr, r)
+                sum * Self::choose_inv(choose_inv_table, kl, l)
+                    * Self::choose_inv(choose_inv_table, kr, r)
             }
             1 => {
                 let sum = (0..=1.min(kl))
@@ -887,6 +942,7 @@ where
                                                 size_table,
                                                 siblings_table,
                                                 choose_table,
+                                                choose_inv_table,
                                                 h - 1,
                                                 ll,
                                                 rr,
@@ -897,6 +953,7 @@ where
                                             ) * Self::siblings_inner(
                                                 siblings_table,
                                                 choose_table,
+                                                choose_inv_table,
                                                 r - 1,
                                                 kr - 1,
                                                 sr,
@@ -907,6 +964,7 @@ where
                                 sum * Self::siblings_inner(
                                     siblings_table,
                                     choose_table,
+                                    choose_inv_table,
                                     l - 1,
                                     kl - xl,
                                     sl,
@@ -916,7 +974,7 @@ where
                         sum * Self::choose(choose_table, kl - xl, l - 1)
                     })
                     .sum::<T>();
-                sum / Self::choose(choose_table, kl, l)
+                sum * Self::choose_inv(choose_inv_table, kl, l)
             }
             -1 => {
                 let sum = (0..=1.min(kl))
@@ -933,6 +991,7 @@ where
                                                 size_table,
                                                 siblings_table,
                                                 choose_table,
+                                                choose_inv_table,
                                                 h - 1,
                                                 ll,
                                                 rr,
@@ -943,6 +1002,7 @@ where
                                             ) * Self::siblings_inner(
                                                 siblings_table,
                                                 choose_table,
+                                                choose_inv_table,
                                                 r - 1,
                                                 kr,
                                                 sr,
@@ -953,6 +1013,7 @@ where
                                 sum * Self::siblings_inner(
                                     siblings_table,
                                     choose_table,
+                                    choose_inv_table,
                                     l - 1,
                                     kl - xl,
                                     sl,
@@ -962,7 +1023,7 @@ where
                         sum * Self::choose(choose_table, kl - xl, l - 1)
                     })
                     .sum::<T>();
-                sum / Self::choose(choose_table, kl, l)
+                sum * Self::choose_inv(choose_inv_table, kl, l)
             }
             _ => panic!("Invalid value for c = {c}"),
         }
@@ -971,17 +1032,24 @@ where
     fn siblings_inner<'a>(
         siblings_table: &'a mut SparseTable3d<T>,
         choose_table: &mut SparseTable2d<T>,
+        choose_inv_table: &mut SparseTable2d<T>,
         x: u32,
         k: u32,
         s: u32,
     ) -> &'a T {
         let index = [x as usize, k as usize, s as usize];
-        siblings_table
-            .entry(index)
-            .or_insert_with(|| Self::siblings_impl(choose_table, x, k, s).reduced())
+        siblings_table.entry(index).or_insert_with(|| {
+            Self::siblings_impl(choose_table, choose_inv_table, x, k, s).reduced()
+        })
     }
 
-    fn siblings_impl(choose_table: &mut SparseTable2d<T>, x: u32, k: u32, s: u32) -> T {
+    fn siblings_impl(
+        choose_table: &mut SparseTable2d<T>,
+        choose_inv_table: &mut SparseTable2d<T>,
+        x: u32,
+        k: u32,
+        s: u32,
+    ) -> T {
         assert!(x % 2 == 0);
         if k < 2 * s || k > x || 2 * s > x {
             T::zero()
@@ -989,7 +1057,7 @@ where
             T::from_log2(k - 2 * s)
                 * Self::choose(choose_table, k - s, x / 2)
                 * Self::choose(choose_table, s, k - s)
-                / Self::choose(choose_table, k, x)
+                * Self::choose_inv(choose_inv_table, k, x)
         }
     }
 
@@ -998,6 +1066,13 @@ where
         table
             .entry(index)
             .or_insert_with(|| choose_impl::<T>(n, among).reduced())
+    }
+
+    fn choose_inv(table: &mut SparseTable2d<T>, n: u32, among: u32) -> &T {
+        let index = [n as usize, among as usize];
+        table
+            .entry(index)
+            .or_insert_with(|| (T::one() / choose_impl::<T>(n, among)).reduced())
     }
 }
 
