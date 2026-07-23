@@ -2,6 +2,7 @@ use num::{BigInt, BigRational, ToPrimitive, Zero};
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
+use std::time::Instant;
 
 fn main() {
     evaluate::<F64Log2>();
@@ -84,6 +85,7 @@ where
     T: Arithmetic + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
+    let start = Instant::now();
     let mut mem: MemoizedComplete<T> = MemoizedComplete::new(k as usize, h as usize);
 
     let mut baseline = Vec::new();
@@ -120,6 +122,7 @@ where
             );
         }
     }
+    println!("Completed in {:?}", Instant::now().duration_since(start));
 }
 
 /// Computes the size distribution of a bucketized PORS Octopus (BPORS) as
@@ -131,6 +134,7 @@ where
     for<'a> &'a T: Mul<&'a T, Output = T>,
     for<'a> &'a T: Div<&'a T, Output = T>,
 {
+    let start = Instant::now();
     let mut mem: Memoized<T> = Memoized::new(k as usize, t as usize);
 
     let mut baseline = Vec::new();
@@ -167,6 +171,7 @@ where
             );
         }
     }
+    println!("Completed in {:?}", Instant::now().duration_since(start));
 }
 
 /// Computes the power of a probability distribution using fast exponentiation.
@@ -212,6 +217,7 @@ where
     T: Arithmetic + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
+    let start = Instant::now();
     let mut mem: MemoizedComplete<T> = MemoizedComplete::new(k as usize, h as usize);
 
     let mut sum = T::zero();
@@ -230,6 +236,7 @@ where
     }
 
     mem.debug();
+    println!("Completed in {:?}", Instant::now().duration_since(start));
 }
 
 fn octopus_size_complete_cutoff<T>(h: u32, k: u32, threshold: f64)
@@ -237,6 +244,7 @@ where
     T: Arithmetic + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
+    let start = Instant::now();
     let mut mem: MemoizedComplete<T> = MemoizedComplete::new(k as usize, h as usize);
 
     let mut sum = T::zero();
@@ -254,6 +262,7 @@ where
     }
 
     mem.debug();
+    println!("Completed in {:?}", Instant::now().duration_since(start));
 }
 
 /// Computes the size distribution of a PORS Octopus in an arbitrary Merkle tree
@@ -264,6 +273,7 @@ where
     for<'a> &'a T: Mul<&'a T, Output = T>,
     for<'a> &'a T: Div<&'a T, Output = T>,
 {
+    let start = Instant::now();
     let mut mem: Memoized<T> = Memoized::new(k as usize, t as usize);
 
     let mut sum = T::zero();
@@ -282,6 +292,7 @@ where
     }
 
     mem.debug();
+    println!("Completed in {:?}", Instant::now().duration_since(start));
 }
 
 fn octopus_size_cutoff<T>(t: u32, k: u32, threshold: f64)
@@ -290,6 +301,7 @@ where
     for<'a> &'a T: Mul<&'a T, Output = T>,
     for<'a> &'a T: Div<&'a T, Output = T>,
 {
+    let start = Instant::now();
     let mut mem: Memoized<T> = Memoized::new(k as usize, t as usize);
 
     let mut sum = T::zero();
@@ -307,6 +319,7 @@ where
     }
 
     mem.debug();
+    println!("Completed in {:?}", Instant::now().duration_since(start));
 }
 
 struct MemoizedComplete<T> {
