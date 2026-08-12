@@ -1,9 +1,13 @@
 use num::{BigInt, BigRational, ToPrimitive, Zero};
-use smart_big_rational::{Denom, SmartBigRational};
+use smart_big_rational::{
+    Denom, DenomRef, DenomSparseU16, SmartBigRational as SmartBigRationalImpl,
+};
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
 use std::time::Instant;
+
+type SmartBigRational = SmartBigRationalImpl<DenomSparseU16<6542, 16>>;
 
 fn main() {
     evaluate::<F64Log2>();
@@ -1283,13 +1287,16 @@ impl Arithmetic for BigRational {
     }
 }
 
-impl Arithmetic for SmartBigRational {
+impl<D: Denom> Arithmetic for SmartBigRationalImpl<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
     fn zero() -> Self {
-        SmartBigRational::ZERO
+        Self::ZERO
     }
 
     fn one() -> Self {
-        SmartBigRational::ONE
+        Self::ONE
     }
 
     fn is_zero(&self) -> bool {
@@ -1297,11 +1304,11 @@ impl Arithmetic for SmartBigRational {
     }
 
     fn from(x: u32) -> Self {
-        SmartBigRational::ratio(x, Denom::ONE)
+        Self::ratio(x, D::ONE)
     }
 
     fn from_log2(x: u32) -> Self {
-        SmartBigRational::ratio(BigInt::from(1) << x, Denom::ONE)
+        Self::ratio(BigInt::from(1) << x, D::ONE)
     }
 
     fn to_f64(&self) -> f64 {

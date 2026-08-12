@@ -3,7 +3,7 @@ name = "gravity"
 version = "0.1.0"
 authors = ["G. Endignoux <ggendx@gmail.com>"]
 edition = "2024"
-rust-version = "1.85.0"
+rust-version = "1.91.0"
 
 [features]
 bigbench = []
@@ -17,7 +17,7 @@ hex = "0.4.3"
 ndtable = "0.1.1"
 num = "0.4.3"
 rustc-hash = "2.1.3"
-smart-big-rational = "0.1.0"
+smart-big-rational = "0.2.0"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
