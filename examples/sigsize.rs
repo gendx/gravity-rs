@@ -651,7 +651,7 @@ where
         if h == 0 {
             // A tree of height 0 always needs 0 authentication nodes.
             if m == 0 { T::one() } else { T::zero() }
-        } else if l % 2 == 0 {
+        } else if l.is_multiple_of(2) {
             Self::size_h_even(
                 size_table,
                 siblings_table,
@@ -1054,7 +1054,7 @@ where
         k: u32,
         s: u32,
     ) -> T {
-        assert!(x % 2 == 0);
+        assert!(x.is_multiple_of(2));
         if k < 2 * s || k > x || 2 * s > x {
             T::zero()
         } else {
