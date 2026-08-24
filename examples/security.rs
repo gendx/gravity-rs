@@ -133,7 +133,6 @@ where
 
         let mut res = T::zero();
         for r in 0..=self.rmax {
-            //let cover = Self::cover_given_r(1, 1 << t, r).powi(k);
             let cover = Self::dark_side(k, 1 << t, r);
             let poisson = Self::weight_poisson(&mut self.weight_poisson, r, h, q, &rate);
             eprint!("r={r}: {} * {}", cover.to_f64_log2(), poisson.to_f64_log2());
