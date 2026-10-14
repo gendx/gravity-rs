@@ -43,6 +43,7 @@ where
 {
     fn evaluate(&mut self) {
         self.slh_dsa();
+        self.gravity_sphincs();
         self.bpors_params();
     }
 
@@ -67,6 +68,15 @@ where
         self.slh_dsa_variants("SLH-DSA-128-24", 6, 24, 22, 24);
         self.slh_dsa_variants("SLH-DSA-192-24", 9, 25, 21, 24);
         self.slh_dsa_variants("SLH-DSA-256-24", 12, 25, 21, 24);
+    }
+
+    fn gravity_sphincs(&mut self) {
+        println!("Gravity-SPHINCS security:");
+        // Parameters from https://gendx.dev/assets/pdf/2017-07-master-thesis-endignoux-report.pdf,
+        // section 7.2.1.
+        self.gravity_sphincs_variants("GravitySmall", 24, 16, 15, 10);
+        self.gravity_sphincs_variants("GravityMedium", 32, 16, 50, 50);
+        self.gravity_sphincs_variants("GravityLarge", 28, 16, 64, 64);
     }
 
     fn bpors_params(&mut self) {
@@ -120,6 +130,17 @@ where
         println!(
             "- {title} (PORS precise): {}",
             self.pors_precise(k, k << t, h, q).to_f64_log2()
+        );
+    }
+
+    fn gravity_sphincs_variants(&mut self, title: &str, k: u32, tau: u32, h: u32, q: u32) {
+        println!(
+            "- {title} (PORS lower bound): {}",
+            self.pors(k, 1 << tau, h, q).to_f64_log2()
+        );
+        println!(
+            "- {title} (PORS precise): {}",
+            self.pors_precise(k, 1 << tau, h, q).to_f64_log2()
         );
     }
 
