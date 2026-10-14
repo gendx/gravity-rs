@@ -17,7 +17,7 @@ impl default::Default for Signature {
 }
 
 // Split a message into a list of Winternitz indices (with checksum)
-#[allow(clippy::needless_range_loop)]
+#[expect(clippy::needless_range_loop)]
 fn split_msg(msg: &Hash) -> [usize; WOTS_ELL] {
     const {
         assert!(
@@ -62,7 +62,6 @@ impl SecKey {
         }
     }
 
-    #[allow(clippy::needless_range_loop)]
     pub fn sign(&self, msg: &Hash) -> Signature {
         let mut sign = Signature([Default::default(); WOTS_ELL]);
         let lengths = split_msg(msg);

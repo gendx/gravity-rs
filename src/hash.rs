@@ -94,7 +94,7 @@ pub fn hash_parallel_all(dst: &mut [Hash], src: &[Hash]) {
 }
 
 #[inline(always)]
-#[allow(clippy::needless_range_loop)]
+#[expect(clippy::needless_range_loop)]
 fn hash_parallel_chains(dst: &mut [Hash], src: &[Hash], count: usize, chainlen: usize) {
     dst[..count].copy_from_slice(&src[..count]);
     for _ in 0..chainlen {

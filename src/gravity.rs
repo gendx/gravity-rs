@@ -153,6 +153,7 @@ where
     [(); P::MERKLE_H]:,
     [(); P::PORS_K]:,
 {
+    #[expect(clippy::needless_range_loop)]
     fn extract_hash(&self, msg: &Hash) -> Option<Hash> {
         if let Some((mut address, mut h)) = self.pors_sign.extract(msg) {
             for i in 0..P::GRAVITY_D {

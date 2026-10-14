@@ -1,4 +1,4 @@
-#![allow(incomplete_features)]
+#![expect(incomplete_features)]
 #![feature(array_try_from_fn, generic_const_exprs)]
 #![cfg_attr(test, feature(test))]
 

@@ -45,7 +45,6 @@ impl<P: GravityParams> SecKey<P> {
         }
     }
 
-    #[allow(clippy::needless_range_loop)]
     pub fn sign_subset(&self, pepper: Hash, subset: [usize; P::PORS_K]) -> (Hash, Signature<P>)
     where
         [(); P::PORS_K]:,
@@ -141,7 +140,7 @@ where
     (address, root, sign)
 }
 
-#[allow(clippy::needless_range_loop)]
+#[expect(clippy::needless_range_loop)]
 fn obtain_address_subset<P: GravityParams>(
     pepper: &Hash,
     msg: &Hash,

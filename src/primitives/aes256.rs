@@ -85,7 +85,7 @@ pub fn expand256_slice(key: &[u8; 32], rkeys: &mut [[u8; 16]; 15]) {
     }
 }
 
-#[allow(clippy::needless_range_loop)]
+#[expect(clippy::needless_range_loop)]
 fn aes256_rkeys_xmm(dst: &mut [u8; 16], src: &[u8; 16], rkeys: &[Simd128; 15]) {
     let mut state_xmm = Simd128::read(src);
 
