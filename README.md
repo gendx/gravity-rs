@@ -30,3 +30,21 @@ For now, this is simply a proposal so don't use it in production!
 
 MIT
 
+## References
+
+Research papers:
+- [SPHINCS: practical stateless hash-based signatures (2014)](https://eprint.iacr.org/2014/795)
+- [Clarifying the subset-resilience problem (2017)](https://eprint.iacr.org/2017/909)
+- [Improving Stateless Hash-Based Signatures (2017)](https://eprint.iacr.org/2017/933)
+- [The SPHINCS+ Signature Framework (2019)](https://eprint.iacr.org/2019/1086)
+- [Shorter Hash-Based Signatures Using Forced Pruning (2025)](https://eprint.iacr.org/2025/2069)
+- [Shorter Hash-based Signatures via Bucket Thinning (2026)](https://eprint.iacr.org/2026/1328)
+
+Standards:
+- [FIPS 205 - Stateless Hash-Based Digital Signature Standard](https://csrc.nist.gov/pubs/fips/205/final)
+- [NIST SP 800-230 (Initial Public Draft) - Additional SLH-DSA Parameter Sets for Limited Signature Use Cases](https://csrc.nist.gov/pubs/sp/800/230/ipd)
+- [SPHINCS+, Submission to the NIST post-quantum project, v.3.1](https://sphincs.org/data/sphincs+-r3.1-specification.pdf)
+
+Related projects:
+- https://github.com/MehdiAbri/PORS-FP
+- https://github.com/sfluhrer/sphincs-param-set-search

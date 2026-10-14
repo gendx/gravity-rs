@@ -42,7 +42,7 @@ where
     evaluate_slh_dsa("SLH-DSA-256s", 14, 22);
     evaluate_slh_dsa("SLH-DSA-256f", 9, 35);
 
-    // Parameters from https://eprint.iacr.org/2025/2069.pdf, section 5.
+    // Parameters from https://eprint.iacr.org/2025/2069, section 5.
     println!("- SLH-DSA-192s (PORS+FP)");
     octopus_size_distribution(65 << 12, 17);
     println!("- SLH-DSA-256s (PORS+FP)");
