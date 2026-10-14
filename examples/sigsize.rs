@@ -612,8 +612,8 @@ where
             (c + 1) as usize,
             m as usize,
         ];
-        // TODO: read the map only once on success when the Polonius borrow checker is
-        // implemented.
+        // TODO: read the map only once on success when the Polonius borrow
+        // checker is implemented.
         if size_table.get(index).is_none() {
             let value = Self::size_h_impl(
                 size_table,

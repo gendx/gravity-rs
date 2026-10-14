@@ -82,8 +82,8 @@ impl<P: GravityParams> SecKey<P> {
             subtree_sign
         });
 
-        // For compatibility with 32-bit architectures, the index must fit in 32 bits
-        // here.
+        // For compatibility with 32-bit architectures, the index must fit in 32
+        // bits here.
         let index: u64 = address.get_instance();
         debug_assert!(index <= u32::MAX as u64);
         let mut auth_c = [Default::default(); P::GRAVITY_C];
@@ -162,8 +162,8 @@ where
                 address.shift(P::MERKLE_H);
             }
 
-            // For compatibility with 32-bit architectures, the index must fit in 32 bits
-            // here.
+            // For compatibility with 32-bit architectures, the index must fit
+            // in 32 bits here.
             let index: u64 = address.get_instance();
             debug_assert!(index <= u32::MAX as u64);
             merkle::merkle_compress_auth(&mut h, &self.auth_c, P::GRAVITY_C, index as usize);

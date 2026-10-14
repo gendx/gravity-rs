@@ -249,7 +249,8 @@ where
         for r in 0..=self.rmax {
             let cover: I = (0..=(k * r).min(t) as usize)
                 .map(|revealed| {
-                    // Each term here is scaled by `choose(k, t) * choose(k, t)^r`...
+                    // Each term here is scaled by `choose(k, t) * choose(k,
+                    // t)^r`...
                     &cover_pors_table[revealed]
                         * size_table[[r as usize, revealed]].as_ref().unwrap()
                 })
@@ -281,9 +282,10 @@ where
         for i in 0..=kr_max {
             let mut sum = I::zero();
             for j in 0..=k {
-                // The real probability is this value divided by `choose(k, t)`, but we let the
-                // caller divide once at the end, which allows working on big integers rather
-                // than big rationals, which is much faster.
+                // The real probability is this value divided by `choose(k, t)`,
+                // but we let the caller divide once at the end, which allows
+                // working on big integers rather than big rationals, which is
+                // much faster.
                 let value = Self::choose_impl(j, i) * Self::choose_impl(k - j, t - i);
                 sum += &value;
                 if !value.is_zero() {
@@ -308,8 +310,8 @@ where
         let overlap_table = self.overlap_table(k, t);
 
         let mut table = Table2d::new([self.rmax as usize + 1, kr_max as usize + 1]);
-        // Initial case: with zero previous signatures, exactly zero values have been
-        // revealed.
+        // Initial case: with zero previous signatures, exactly zero values have
+        // been revealed.
         table[[0, 0]] = Some(I::one());
         for i in 1..=kr_max as usize {
             table[[0, i]] = Some(I::zero());
@@ -326,12 +328,13 @@ where
                     continue;
                 }
                 for j in 0..=k as usize {
-                    // Ignore indices beyond the threshold. This case can happen if `k * rmax > t`.
+                    // Ignore indices beyond the threshold. This case can happen
+                    // if `k * rmax > t`.
                     if i + j > kr_max as usize {
                         continue;
                     }
-                    // Each value in `overlap_table` is scaled by `choose(k, t)`, so this is scaled
-                    // by `choose(k, t)^r`.
+                    // Each value in `overlap_table` is scaled by `choose(k,
+                    // t)`, so this is scaled by `choose(k, t)^r`.
                     let p = table[[r - 1, i]].as_ref().unwrap()
                         * overlap_table[[i, k as usize - j]].as_ref().unwrap();
                     *table[[r, i + j]].as_mut().unwrap() += p;
