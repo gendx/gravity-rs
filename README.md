@@ -38,11 +38,14 @@ Research papers:
 - [Improving Stateless Hash-Based Signatures (2017)](https://eprint.iacr.org/2017/933)
 - [The SPHINCS+ Signature Framework (2019)](https://eprint.iacr.org/2019/1086)
 - [Recovering the Tight Security Proof of SPHINCS+ (2012)](https://eprint.iacr.org/2022/346)
+- [SPHINCS+C: Compressing SPHINCS+ With (Almost) No Cost](https://eprint.iacr.org/2022/778)
 - [Revisiting the Constant-sum Winternitz One-time Signature with Applications to SPHINCS+ and XMSS (2023)](https://eprint.iacr.org/2023/850)
+- [At the Top of the Hypercube -- Better Size-Time Tradeoffs for Hash-Based Signatures (2025)](https://eprint.iacr.org/2025/889)
 - [Shorter Hash-Based Signatures Using Forced Pruning (2025)](https://eprint.iacr.org/2025/2069)
 - [Extending the SPHINCS+ Framework: Varying the Tree Heights and Chain Lengths (2025)](https://eprint.iacr.org/2025/2236)
 - [Shorter Hash-based Signatures via Bucket Thinning (2026)](https://eprint.iacr.org/2026/1328)
 - [Shorter Few-Time Signatures from Hash Chains and Blockwise Forced Pruning (2026)](https://eprint.iacr.org/2026/2374)
+- [Shorter Hash-Based Signatures via Guarded Sharing in a DAG Model (2026)](https://eprint.iacr.org/2026/2502)
 
 Standards:
 - [FIPS 205 - Stateless Hash-Based Digital Signature Standard](https://csrc.nist.gov/pubs/fips/205/final)
