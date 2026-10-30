@@ -363,15 +363,19 @@ where
         let mut res = T::zero();
         for r in 0..=self.rmax {
             let subcover = self.cover_bpors(&mut pors_table, k, t, B, r);
-            eprintln!("r={r}: {}^{K}", subcover.to_f64_log2());
+            eprintln!("r={r}: 2^{}^{K}", subcover.to_f64_log2());
             let cover = subcover.powi(K);
 
             let poisson = Self::weight_poisson(&mut self.weight_poisson, r, h, q, &rate);
-            eprint!("r={r}: {} * {}", cover.to_f64_log2(), poisson.to_f64_log2());
+            eprint!(
+                "r={r}: 2^{} * 2^{}",
+                cover.to_f64_log2(),
+                poisson.to_f64_log2()
+            );
             let product = cover * poisson;
-            eprint!(" = {}", product.to_f64_log2());
+            eprint!(" = 2^{}", product.to_f64_log2());
             res += product;
-            eprintln!(" -> {}", res.to_f64_log2());
+            eprintln!(" -> 2^{}", res.to_f64_log2());
         }
         res
     }
@@ -389,12 +393,12 @@ where
                 }
                 let subcover = subcover.as_ref().unwrap();
                 eprint!(
-                    "  rr={rr}: {} * {}",
+                    "  rr={rr}: 2^{} * 2^{}",
                     subcover.to_f64_log2(),
                     binom.to_f64_log2()
                 );
                 let product = binom * subcover;
-                eprintln!(" = {}", product.to_f64_log2());
+                eprintln!(" = 2^{}", product.to_f64_log2());
                 product
             })
             .sum()
@@ -418,7 +422,11 @@ where
     fn binom_power(table: &mut Table2d<T>, B: u32, r: u32) -> &T {
         let x = &mut table[[B as usize, r as usize]];
         if x.is_none() {
-            let value = (T::one() / T::from_log2(B)).powi(r);
+            let value = if r == 0 {
+                T::one()
+            } else {
+                (T::one() / T::from_log2(B)).powi(r)
+            };
             *x = Some(value);
         }
         x.as_ref().unwrap()
@@ -429,7 +437,11 @@ where
     fn binom_opposite_power(table: &mut Table2d<T>, B: u32, r: u32) -> &T {
         let x = &mut table[[B as usize, r as usize]];
         if x.is_none() {
-            let value = (T::one() / T::from_log2(B)).one_minus_x().powi(r);
+            let value = if r == 0 {
+                T::one()
+            } else {
+                (T::one() / T::from_log2(B)).one_minus_x().powi(r)
+            };
             *x = Some(value);
         }
         x.as_ref().unwrap()
