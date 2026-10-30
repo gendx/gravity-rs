@@ -3,6 +3,7 @@ use num::{BigInt, BigRational, One, ToPrimitive, Zero};
 use smart_big_rational::{
     Denom, DenomRef, DenomSparseU16, SmartBigRational as SmartBigRationalImpl,
 };
+use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
 use std::iter::Sum;
@@ -21,10 +22,13 @@ fn main() {
     mem.evaluate();
 }
 
+#[expect(non_snake_case)]
 struct Memoized<I, T> {
     weight_poisson: Table3d<T>,
     choose: Table2d<I>,
     binom_t: Table2d<T>,
+    table_h: HashMap<(u32, u32), i32>,
+    N: u32,
     rmax: u32,
 }
 
@@ -34,6 +38,8 @@ impl<I: Clone, T: Clone> Memoized<I, T> {
             weight_poisson: Table3d::new([70, 70, rmax as usize + 1]),
             choose: Table2d::new([rmax as usize + 1, rmax as usize + 1]),
             binom_t: Table2d::new([rmax as usize + 1, rmax as usize + 1]),
+            table_h: HashMap::default(),
+            N: 0,
             rmax,
         }
     }
@@ -48,34 +54,172 @@ where
 {
     fn evaluate(&mut self) {
         // Parameters from https://eprint.iacr.org/2026/2502.pdf, table 5.
-        self.evaluate_base_gs("128s", 3, 10, 5, 1, 0, 63, 64);
-        self.evaluate_base_gs("192s", 6, 12, 6, 1, 0, 63, 64);
-        self.evaluate_base_gs("256s", 3, 17, 6, 1, 0, 64, 64);
-        self.evaluate_base_gs("128f", 2, 5, 2, 7, 1, 66, 64);
-        self.evaluate_base_gs("192f", 4, 34, 3, 1, 0, 66, 64);
-        self.evaluate_base_gs("256f", 3, 6, 3, 6, 1, 68, 64);
-        self.evaluate_base_gs("128-224", 3, 5, 7, 1, 5, 22, 24);
-        self.evaluate_base_gs("192-224", 7, 8, 7, 1, 6, 21, 24);
-        self.evaluate_base_gs("256-224", 9, 11, 7, 1, 8, 21, 24);
+        self.evaluate_gs(
+            "128s",
+            3,
+            10,
+            &[3, 3, 3, 3, 3, 6],
+            8,
+            1,
+            0,
+            63,
+            64,
+            19 << 14,
+        );
+        self.evaluate_gs(
+            "192s",
+            6,
+            12,
+            &[3, 3, 3, 3, 3, 3, 6],
+            9,
+            1,
+            0,
+            63,
+            64,
+            13 << 14,
+        );
+        self.evaluate_gs(
+            "256s",
+            3,
+            17,
+            &[1, 3, 3, 3, 3, 3, 3],
+            8,
+            1,
+            0,
+            64,
+            64,
+            273 << 8,
+        );
+        self.evaluate_gs("128f", 2, 5, &[1, 1, 2], 2, 7, 1, 66, 64, 7 << 21);
+        self.evaluate_gs("192f", 4, 34, &[2, 2, 2, 4], 4, 1, 0, 66, 64, 69 << 16);
+        self.evaluate_gs("256f", 3, 6, &[1, 3, 3, 3], 4, 6, 1, 68, 64, 41 << 15);
+        self.evaluate_gs(
+            "128-224",
+            3,
+            5,
+            &[4, 4, 4, 4, 4, 4, 4, 4],
+            12,
+            1,
+            5,
+            22,
+            24,
+            82,
+        );
+        self.evaluate_gs(
+            "192-224",
+            7,
+            8,
+            &[4, 4, 4, 4, 4, 4, 4, 4],
+            12,
+            1,
+            6,
+            21,
+            24,
+            104,
+        );
+        self.evaluate_gs(
+            "256-224",
+            9,
+            11,
+            &[4, 4, 4, 4, 4, 4, 4, 4],
+            12,
+            1,
+            8,
+            21,
+            24,
+            208,
+        );
     }
 
     #[expect(non_snake_case, unused_variables, clippy::too_many_arguments)]
-    fn evaluate_base_gs(
+    fn evaluate_gs(
         &mut self,
         title: &str,
         u: u32,
         r: u32,
-        L: u32,
+        c: &[u32],
+        E: u32,
         K: u32,
         b: u32,
         h: u32,
         q: u32,
+        delta: u32,
     ) {
+        let k = c.len() as u32;
+        let L = k - 1;
         self.binom_t = Table2d::new([self.rmax as usize + 1, self.rmax as usize + 1]);
+        (self.table_h, self.N) = Self::generate_table_h(c, E);
         println!(
             "- {title}: base_gs(2^{u}, {r}, 2^{L}, 2^{h}, 2^{q}) = 2^{}",
             self.base_gs(u, r, L, h, q).to_f64_log2()
         );
+    }
+
+    /// Computes the table of `h_{a,d}` as described in
+    /// https://eprint.iacr.org/2026/2502.pdf, equations 23-24.
+    #[expect(non_snake_case)]
+    fn generate_table_h(c: &[u32], E: u32) -> (HashMap<(u32, u32), i32>, u32) {
+        let k = c.len() as u32;
+        let L = k - 1;
+
+        let mut N = 0;
+        let mut table_h = HashMap::default();
+        for e in LkceGenerator::new(c, E) {
+            N += 1;
+            let mut table_ae = vec![0; 1 << k];
+            for s in 0..1 << k {
+                table_ae[s as usize] = Self::aes(&e, c, s, E as usize);
+            }
+            for s in 0u32..1 << k {
+                let ae = table_ae[s as usize];
+                let de = (0..L)
+                    .filter(|j| s & (1 << j) == 0)
+                    .map(|j| table_ae[s as usize & ((1 << j) - 1)] << (L - j - 1))
+                    .sum();
+                if s.count_ones() % 2 == 0 {
+                    *table_h.entry((ae, de)).or_insert(0) += 1;
+                } else {
+                    *table_h.entry((ae, de)).or_insert(0) -= 1;
+                }
+            }
+        }
+
+        // Double-checking the value of N.
+        let mut p = Poly::ones(1);
+        for &x in c.iter() {
+            p = p.mul_trunc(&Poly::ones(x as usize + 1), E as usize + 1);
+        }
+        assert_eq!(N, p.0[E as usize]);
+
+        let sum: i32 = table_h.values().sum();
+        assert_eq!(sum, 0);
+
+        (table_h, N)
+    }
+
+    /// Computes the number of codewords `x` satisfying `x.sum() == E` and `x[i]
+    /// < e[i]` if the i-th bit of `s` is set and `x[i] <= c[i]` otherwise.
+    ///
+    /// See https://eprint.iacr.org/2026/2502.pdf, equation 21.
+    #[expect(non_snake_case)]
+    fn aes(e: &[u32], c: &[u32], s: u32, E: usize) -> u32 {
+        // Optimization: if an index is selected where the codeword e[i] is
+        // zero, the result is zero.
+        for (i, x) in e.iter().enumerate() {
+            if s & (1 << i) != 0 && *x == 0 {
+                return 0;
+            }
+        }
+
+        let mut p = Poly::ones(1);
+        for (i, x) in e.iter().enumerate() {
+            if s & (1 << i) != 0 {
+                p = p.mul_trunc(&Poly::ones(*x as usize), E + 1);
+            } else {
+                p = p.mul_trunc(&Poly::ones(c[i] as usize + 1), E + 1);
+            }
+        }
+        *p.0.get(E).unwrap_or(&0)
     }
 
     /// Returns an upper bound of the success probability of an attacker making
@@ -327,8 +471,33 @@ where
     }
 }
 
+#[derive(Debug)]
+struct Poly(Vec<u32>);
+
+impl Poly {
+    fn ones(n: usize) -> Self {
+        Self(vec![1; n])
+    }
+
+    fn mul_trunc(&self, other: &Self, n: usize) -> Self {
+        let n = (self.0.len() + other.0.len() - 1).min(n);
+        let mut result = vec![0; n];
+        for (i, x) in self.0.iter().enumerate() {
+            if i >= n {
+                break;
+            }
+            for (j, y) in other.0.iter().enumerate() {
+                if i + j >= n {
+                    break;
+                }
+                result[i + j] += x * y;
+            }
+        }
+        Self(result)
+    }
+}
+
 /// Generator of all codewords `x` satisfying `x[i] <= c[i]` and `x.sum() == E`.
-#[cfg(test)]
 #[derive(PartialEq, Eq, Debug)]
 #[expect(non_snake_case)]
 struct LkceGenerator<'a> {
@@ -337,7 +506,6 @@ struct LkceGenerator<'a> {
     e: Option<Vec<u32>>,
 }
 
-#[cfg(test)]
 impl<'a> LkceGenerator<'a> {
     #[expect(non_snake_case)]
     fn new(c: &'a [u32], E: u32) -> Self {
@@ -356,7 +524,6 @@ impl<'a> LkceGenerator<'a> {
     }
 }
 
-#[cfg(test)]
 impl Iterator for LkceGenerator<'_> {
     type Item = Vec<u32>;
 
@@ -384,7 +551,7 @@ impl Iterator for LkceGenerator<'_> {
         }
 
         self.e = None;
-        return Some(result);
+        Some(result)
     }
 }
 
