@@ -327,6 +327,67 @@ where
     }
 }
 
+/// Generator of all codewords `x` satisfying `x[i] <= c[i]` and `x.sum() == E`.
+#[cfg(test)]
+#[derive(PartialEq, Eq, Debug)]
+#[expect(non_snake_case)]
+struct LkceGenerator<'a> {
+    c: &'a [u32],
+    E: u32,
+    e: Option<Vec<u32>>,
+}
+
+#[cfg(test)]
+impl<'a> LkceGenerator<'a> {
+    #[expect(non_snake_case)]
+    fn new(c: &'a [u32], E: u32) -> Self {
+        let mut e = vec![0; c.len()];
+        let mut sum = 0;
+        for (i, x) in e.iter_mut().enumerate() {
+            if sum + c[i] < E {
+                *x = c[i];
+                sum += c[i];
+            } else {
+                *x = E - sum;
+                return Self { c, E, e: Some(e) };
+            }
+        }
+        Self { c, E, e: None }
+    }
+}
+
+#[cfg(test)]
+impl Iterator for LkceGenerator<'_> {
+    type Item = Vec<u32>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let e = self.e.as_mut()?;
+        let result = e.clone();
+
+        let mut sum = 0;
+        for (i, x) in e.iter_mut().enumerate() {
+            if sum > 0 && *x < self.c[i] {
+                *x += 1;
+                sum -= 1;
+                for (j, y) in e.iter_mut().enumerate().take(i) {
+                    if self.c[j] < sum {
+                        *y = self.c[j];
+                        sum -= self.c[j];
+                    } else {
+                        *y = sum;
+                        sum = 0;
+                    }
+                }
+                return Some(result);
+            }
+            sum += *x;
+        }
+
+        self.e = None;
+        return Some(result);
+    }
+}
+
 trait Integer:
     Mul<Output = Self>
     + Div<Output = Self>
@@ -678,5 +739,78 @@ where
 
     fn reduce(&mut self) {
         self.reduce();
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_lkce_generator() {
+        let codewords: Vec<_> = LkceGenerator::new(&[1, 1, 2], 2).collect();
+        assert_eq!(
+            codewords,
+            vec![vec![1, 1, 0], vec![1, 0, 1], vec![0, 1, 1], vec![0, 0, 2]]
+        );
+
+        let codewords: Vec<_> = LkceGenerator::new(&[1, 3, 3, 3], 4).collect();
+        assert_eq!(
+            codewords,
+            vec![
+                vec![1, 3, 0, 0],
+                vec![1, 2, 1, 0],
+                vec![0, 3, 1, 0],
+                vec![1, 1, 2, 0],
+                vec![0, 2, 2, 0],
+                vec![1, 0, 3, 0],
+                vec![0, 1, 3, 0],
+                vec![1, 2, 0, 1],
+                vec![0, 3, 0, 1],
+                vec![1, 1, 1, 1],
+                vec![0, 2, 1, 1],
+                vec![1, 0, 2, 1],
+                vec![0, 1, 2, 1],
+                vec![0, 0, 3, 1],
+                vec![1, 1, 0, 2],
+                vec![0, 2, 0, 2],
+                vec![1, 0, 1, 2],
+                vec![0, 1, 1, 2],
+                vec![0, 0, 2, 2],
+                vec![1, 0, 0, 3],
+                vec![0, 1, 0, 3],
+                vec![0, 0, 1, 3]
+            ]
+        );
+
+        let codewords: Vec<_> = LkceGenerator::new(&[2, 2, 2, 4], 4).collect();
+        assert_eq!(
+            codewords,
+            vec![
+                vec![2, 2, 0, 0],
+                vec![2, 1, 1, 0],
+                vec![1, 2, 1, 0],
+                vec![2, 0, 2, 0],
+                vec![1, 1, 2, 0],
+                vec![0, 2, 2, 0],
+                vec![2, 1, 0, 1],
+                vec![1, 2, 0, 1],
+                vec![2, 0, 1, 1],
+                vec![1, 1, 1, 1],
+                vec![0, 2, 1, 1],
+                vec![1, 0, 2, 1],
+                vec![0, 1, 2, 1],
+                vec![2, 0, 0, 2],
+                vec![1, 1, 0, 2],
+                vec![0, 2, 0, 2],
+                vec![1, 0, 1, 2],
+                vec![0, 1, 1, 2],
+                vec![0, 0, 2, 2],
+                vec![1, 0, 0, 3],
+                vec![0, 1, 0, 3],
+                vec![0, 0, 1, 3],
+                vec![0, 0, 0, 4]
+            ]
+        );
     }
 }
