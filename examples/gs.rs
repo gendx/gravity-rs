@@ -144,7 +144,7 @@ where
         );
     }
 
-    #[expect(non_snake_case, unused_variables, clippy::too_many_arguments)]
+    #[expect(non_snake_case, clippy::too_many_arguments)]
     fn evaluate_gs(
         &mut self,
         title: &str,
@@ -165,9 +165,13 @@ where
 
         (self.table_h, self.N) = Self::generate_table_h(c, E);
         let p = self.gsc(u, r, L, K, b, h, q).to_f64_log2();
+
+        let tau = tau(r, K, delta, self.N);
         println!(
-            "- {title}: cover_gsc(2^{u}, {r}, 2^{L}, {K}, 2^{b}, 2^{h}, 2^{q}) = 2^{}",
+            "- {title}: cover_gsc(2^{u}, {r}, 2^{L}, {K}, 2^{b}, 2^{h}, 2^{q}) = 2^{} * 2^{} = 2^{}",
             p,
+            tau.log2(),
+            p + tau.log2(),
         );
     }
 
@@ -526,6 +530,21 @@ where
     fn choose_impl(n: u32, among: u32) -> I {
         I::choose(n, among)
     }
+}
+
+/// Computes the acceptance probability `tau` as described in
+/// https://eprint.iacr.org/2026/2502.pdf, section 4.4.
+#[expect(non_snake_case)]
+fn tau(r: u32, K: u32, delta: u32, N: u32) -> f64 {
+    let U = <BigUint as From<_>>::from(N).pow(r * K);
+    assert!(!U.is_zero());
+    let l = (&U - BigUint::one()).bits();
+    let eta =
+        ToPrimitive::to_f64(&BigRational::new(U.into(), (BigUint::one() << l).into())).unwrap();
+    let rho = delta as f64 / 4294967296_f64;
+    let tau = rho * eta;
+    println!("tau = {rho} * {eta} = {tau}");
+    tau
 }
 
 #[derive(Clone)]
@@ -1215,6 +1234,63 @@ mod test {
                 vec![0, 0, 1, 3],
                 vec![0, 0, 0, 4]
             ]
+        );
+    }
+
+    #[expect(non_snake_case)]
+    fn n(c: &[u32], E: u32) -> u32 {
+        let mut p = Poly::ones(1);
+        for &x in c.iter() {
+            p = p.mul_trunc(&Poly::ones(x as usize + 1), E as usize + 1);
+        }
+        p.0[E as usize]
+    }
+
+    #[test]
+    fn test_tau() {
+        // 128s
+        assert_eq!(
+            tau(10, 1, 19 << 14, n(&[3, 3, 3, 3, 3, 6], 8)),
+            5.826512485669614e-5
+        );
+        // 192s
+        assert_eq!(
+            tau(12, 1, 13 << 14, n(&[3, 3, 3, 3, 3, 3, 6], 9)),
+            2.6284382248589868e-5
+        );
+        // 256s
+        assert_eq!(
+            tau(17, 1, 273 << 8, n(&[1, 3, 3, 3, 3, 3, 3], 8)),
+            1.1248503667621254e-5
+        );
+
+        // 128f
+        assert_eq!(tau(5, 7, 7 << 21, n(&[1, 1, 2], 2)), 0.00341796875);
+        // 192f
+        assert_eq!(
+            tau(34, 1, 69 << 16, n(&[2, 2, 2, 4], 4)),
+            0.0009172680202196682
+        );
+        // 256f
+        assert_eq!(
+            tau(6, 6, 41 << 15, n(&[1, 3, 3, 3], 4)),
+            0.00022733229595057778
+        );
+
+        // 128-24
+        assert_eq!(
+            tau(5, 1, 82, n(&[4, 4, 4, 4, 4, 4, 4, 4], 12)),
+            1.589589692632599e-8
+        );
+        // 192-24
+        assert_eq!(
+            tau(8, 1, 104, n(&[4, 4, 4, 4, 4, 4, 4, 4], 12)),
+            1.5723787066908483e-8
+        );
+        // 256-24
+        assert_eq!(
+            tau(11, 1, 208, n(&[4, 4, 4, 4, 4, 4, 4, 4], 12)),
+            2.4526737249643192e-8
         );
     }
 }
