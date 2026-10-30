@@ -1,5 +1,5 @@
 use num::traits::Pow;
-use num::{BigInt, BigRational, One, ToPrimitive, Zero};
+use num::{BigInt, BigRational, BigUint, One, ToPrimitive, Zero};
 use smart_big_rational::{
     Denom, DenomRef, DenomSparseU16, SmartBigRational as SmartBigRationalImpl,
 };
@@ -15,40 +15,47 @@ type Table3d<T> = ndtable::Table3d<Option<T>>;
 type SmartBigRational = SmartBigRationalImpl<DenomSparseU16<6542, 16>>;
 
 fn main() {
-    let mut mem: Memoized<F64Log2, F64Log2> = Memoized::new(/* max(r) */ 50);
+    let mut mem: Memoized<F64Log2, F64Log2, F64Log2> = Memoized::new(/* max(r) */ 50);
     mem.evaluate();
 
-    let mut mem: Memoized<BigInt, SmartBigRational> = Memoized::new(/* max(r) */ 50);
+    let mut mem: Memoized<BigInt, BigUint, SmartBigRational> = Memoized::new(/* max(r) */ 50);
     mem.evaluate();
 }
 
 #[expect(non_snake_case)]
-struct Memoized<I, T> {
+struct Memoized<I, D, T> {
     weight_poisson: Table3d<T>,
     choose: Table2d<I>,
     binom_t: Table2d<T>,
     table_h: HashMap<(u32, u32), i32>,
+    table_pow: HashMap<(u32, u32), I>,
     N: u32,
+    fmv: Table2d<T>,
     rmax: u32,
+    _phantom: PhantomData<D>,
 }
 
-impl<I: Clone, T: Clone> Memoized<I, T> {
+impl<I: Clone, D, T: Clone> Memoized<I, D, T> {
     fn new(rmax: u32) -> Self {
         Self {
             weight_poisson: Table3d::new([70, 70, rmax as usize + 1]),
             choose: Table2d::new([rmax as usize + 1, rmax as usize + 1]),
             binom_t: Table2d::new([rmax as usize + 1, rmax as usize + 1]),
             table_h: HashMap::default(),
+            table_pow: HashMap::default(),
             N: 0,
+            fmv: Table2d::new([rmax as usize + 1, rmax as usize + 1]),
             rmax,
+            _phantom: PhantomData,
         }
     }
 }
 
-impl<I, T> Memoized<I, T>
+impl<I, D, T> Memoized<I, D, T>
 where
     I: Integer + Clone,
-    T: Rational<I> + Debug + Default + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Debug + Default + Clone,
     for<'a> &'a I: Mul<&'a I, Output = I>,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
@@ -148,6 +155,7 @@ where
         let k = c.len() as u32;
         let L = k - 1;
         self.binom_t = Table2d::new([self.rmax as usize + 1, self.rmax as usize + 1]);
+        self.fmv = Table2d::new([self.rmax as usize + 1, self.rmax as usize + 1]);
         (self.table_h, self.N) = Self::generate_table_h(c, E);
         println!(
             "- {title}: base_gs(2^{u}, {r}, 2^{L}, 2^{h}, 2^{q}) = 2^{}",
@@ -248,11 +256,16 @@ where
         res.reduced()
     }
 
+    #[expect(non_snake_case)]
     fn gs_cover(&mut self, o: u32, r: u32, t: u32, q: u32) -> T {
+        assert!(t > 1);
+        assert!(self.N != 0);
         let tt = T::one() / T::from(t);
         let one_minus_tt = tt.one_minus_x();
+        let t_minus_one = D::from(t - 1);
+        let N = D::from(self.N);
 
-        let matrix_q: Matrix<I, T> = Matrix::generate(q, |i, j| {
+        let matrix_q: Matrix<I, D, T> = Matrix::generate(q, |i, j| {
             let i = i + 1;
             let j = j + 1;
             ((i + j).saturating_sub(q).max(1)..=i.min(j))
@@ -261,26 +274,33 @@ where
                     assert!(i <= q);
                     assert!(v <= i);
                     assert!(j - v <= q - i);
-                    Self::binom(
+                    Self::fmv(
+                        &mut self.fmv,
+                        &self.table_h,
+                        &mut self.table_pow,
+                        i,
+                        v,
+                        &N,
+                        &t_minus_one,
+                    ) * Self::binom(
                         &mut self.binom_t,
                         &mut self.choose,
                         v,
                         i,
                         &tt,
                         &one_minus_tt,
+                    ) * Self::binom(
+                        &mut self.binom_t,
+                        &mut self.choose,
+                        j - v,
+                        q - i,
+                        &tt,
+                        &one_minus_tt,
                     )
-                    .clone()
-                        * Self::binom(
-                            &mut self.binom_t,
-                            &mut self.choose,
-                            j - v,
-                            q - i,
-                            &tt,
-                            &one_minus_tt,
-                        )
                 })
                 .sum::<T>()
         });
+
         let matrix_qr = matrix_q.powi(r);
 
         let oo = T::one() / T::from(o);
@@ -293,6 +313,70 @@ where
                     * Self::binom_impl(&mut self.choose, i + 1, q, &oo, &one_minus_oo)
             })
             .sum::<T>()
+    }
+
+    /// Computes the local covering probability `f(m, v)` given that `m`
+    /// histories select the current owner, of which `v` select the target slot,
+    /// as described in https://eprint.iacr.org/2026/2502.pdf, equation 24.
+    #[expect(non_snake_case)]
+    fn fmv<'a>(
+        table: &'a mut Table2d<T>,
+        table_h: &HashMap<(u32, u32), i32>,
+        table_pow: &mut HashMap<(u32, u32), I>,
+        m: u32,
+        v: u32,
+        N: &D,
+        t_minus_one: &D,
+    ) -> &'a T {
+        let x = &mut table[[m as usize, v as usize]];
+        if x.is_none() {
+            let value = Self::fmv_impl(table_h, table_pow, m, v, N, t_minus_one);
+            *x = Some(value);
+        }
+        x.as_ref().unwrap()
+    }
+
+    #[expect(non_snake_case)]
+    fn fmv_impl(
+        table_h: &HashMap<(u32, u32), i32>,
+        table_pow: &mut HashMap<(u32, u32), I>,
+        m: u32,
+        v: u32,
+        N: &D,
+        t_minus_one: &D,
+    ) -> T {
+        if v == 0 {
+            return T::zero();
+        }
+        if m == 1 && v == 1 {
+            return T::from_ratio(I::one(), N.clone());
+        }
+
+        assert!(v <= m);
+        let mut sum_pos = I::zero();
+        let mut sum_neg = I::zero();
+        for (&(a, d), &h) in table_h.iter() {
+            if h >= 0 {
+                sum_pos +=
+                    I::from(h as u32) * Self::pow(table_pow, a, v) * Self::pow(table_pow, d, m - v);
+            } else {
+                sum_neg += I::from((-h) as u32)
+                    * Self::pow(table_pow, a, v)
+                    * Self::pow(table_pow, d, m - v);
+            }
+        }
+        T::from_ratio(sum_pos - sum_neg, N.powi(m + 1) * t_minus_one.powi(m - v))
+    }
+
+    /// Returns a^n, with the convention that 0^0 = 1.
+    fn pow(table: &mut HashMap<(u32, u32), I>, a: u32, n: u32) -> &I {
+        table.entry((a, n)).or_insert_with(|| {
+            if a == 0 {
+                I::zero()
+            } else {
+                I::from(a).powi(n)
+            }
+        })
     }
 
     /// Probability that a Poisson distribution of parameter `rate = 2^(q - h)`
@@ -356,12 +440,12 @@ where
 }
 
 #[derive(Clone)]
-struct Matrix<I, T> {
+struct Matrix<I, D, T> {
     data: ndtable::Table2d<T>,
-    _phantom: PhantomData<I>,
+    _phantom: PhantomData<(I, D)>,
 }
 
-impl<I, T> Debug for Matrix<I, T>
+impl<I, D, T> Debug for Matrix<I, D, T>
 where
     T: Debug,
 {
@@ -394,13 +478,14 @@ where
     }
 }
 
-impl<I, T> Mul for &Matrix<I, T>
+impl<I, D, T> Mul for &Matrix<I, D, T>
 where
     I: Integer + Clone,
-    T: Rational<I> + Default + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Default + Clone,
     for<'a> &'a T: Mul<Output = T>,
 {
-    type Output = Matrix<I, T>;
+    type Output = Matrix<I, D, T>;
 
     fn mul(self, rhs: Self) -> Self::Output {
         let &[a, b] = self.data.size();
@@ -421,10 +506,11 @@ where
     }
 }
 
-impl<I, T> Matrix<I, T>
+impl<I, D, T> Matrix<I, D, T>
 where
     I: Integer + Clone,
-    T: Rational<I> + Default + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Default + Clone,
     for<'a> &'a T: Mul<Output = T>,
 {
     fn generate(n: u32, mut f: impl FnMut(u32, u32) -> T) -> Self {
@@ -556,11 +642,13 @@ impl Iterator for LkceGenerator<'_> {
 }
 
 trait Integer:
-    Mul<Output = Self>
+    Sub<Output = Self>
+    + Mul<Output = Self>
     + Div<Output = Self>
     + AddAssign
     + MulAssign
     + Sum
+    + for<'a> Mul<&'a Self, Output = Self>
     + for<'a> AddAssign<&'a Self>
     + for<'a> MulAssign<&'a Self>
 {
@@ -569,6 +657,8 @@ trait Integer:
     fn one() -> Self;
 
     fn from(x: u32) -> Self;
+
+    fn powi(&self, n: u32) -> Self;
 
     fn choose(n: u32, among: u32) -> Self {
         if n > among {
@@ -582,7 +672,13 @@ trait Integer:
     }
 }
 
-trait Rational<I: Integer>:
+trait Denominator: Sized + Mul<Output = Self> {
+    fn from(x: u32) -> Self;
+
+    fn powi(&self, n: u32) -> Self;
+}
+
+trait Rational<I: Integer, D: Denominator>:
     Add<Output = Self>
     + Mul<Output = Self>
     + Div<Output = Self>
@@ -597,6 +693,8 @@ trait Rational<I: Integer>:
     + for<'a> MulAssign<&'a Self>
     + for<'a> Mul<&'a I, Output = Self>
 {
+    fn from_ratio(num: I, denom: D) -> Self;
+
     fn zero() -> Self;
 
     fn one() -> Self;
@@ -736,7 +834,7 @@ impl Sum for F64Log2 {
     where
         I: Iterator<Item = Self>,
     {
-        iter.fold(<Self as Rational<Self>>::zero(), |acc, x| acc + x)
+        iter.fold(<Self as Rational<Self, Self>>::zero(), |acc, x| acc + x)
     }
 }
 
@@ -752,9 +850,27 @@ impl Integer for F64Log2 {
     fn from(x: u32) -> Self {
         F64Log2((x as f64).log2())
     }
+
+    fn powi(&self, n: u32) -> Self {
+        F64Log2(n as f64 * self.0)
+    }
 }
 
-impl Rational<F64Log2> for F64Log2 {
+impl Denominator for F64Log2 {
+    fn from(x: u32) -> Self {
+        F64Log2((x as f64).log2())
+    }
+
+    fn powi(&self, n: u32) -> Self {
+        F64Log2(n as f64 * self.0)
+    }
+}
+
+impl Rational<F64Log2, F64Log2> for F64Log2 {
+    fn from_ratio(num: F64Log2, denom: F64Log2) -> Self {
+        num / denom
+    }
+
     fn zero() -> Self {
         F64Log2(f64::NEG_INFINITY)
     }
@@ -805,6 +921,10 @@ impl Integer for BigInt {
         x.into()
     }
 
+    fn powi(&self, n: u32) -> Self {
+        self.pow(n)
+    }
+
     fn choose(n: u32, among: u32) -> Self {
         if n > among {
             return <Self as Integer>::zero();
@@ -824,7 +944,21 @@ impl Integer for BigInt {
     }
 }
 
-impl Rational<BigInt> for BigRational {
+impl Denominator for BigInt {
+    fn from(x: u32) -> Self {
+        x.into()
+    }
+
+    fn powi(&self, n: u32) -> Self {
+        self.pow(n)
+    }
+}
+
+impl Rational<BigInt, BigInt> for BigRational {
+    fn from_ratio(num: BigInt, denom: BigInt) -> Self {
+        BigRational::new(num, denom)
+    }
+
     fn zero() -> Self {
         <BigRational as Zero>::zero()
     }
@@ -862,10 +996,24 @@ impl Rational<BigInt> for BigRational {
     }
 }
 
-impl<D: Denom> Rational<BigInt> for SmartBigRationalImpl<D>
+impl Denominator for BigUint {
+    fn from(x: u32) -> Self {
+        x.into()
+    }
+
+    fn powi(&self, n: u32) -> Self {
+        self.pow(n)
+    }
+}
+
+impl<D: Denom> Rational<BigInt, BigUint> for SmartBigRationalImpl<D>
 where
     for<'a> &'a D: DenomRef<D>,
 {
+    fn from_ratio(num: BigInt, denom: BigUint) -> Self {
+        Self::ratio(num, denom)
+    }
+
     fn zero() -> Self {
         Self::ZERO
     }
