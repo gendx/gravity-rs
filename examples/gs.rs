@@ -15,10 +15,12 @@ type Table3d<T> = ndtable::Table3d<Option<T>>;
 type SmartBigRational = SmartBigRationalImpl<DenomSparseU16<6542, 16>>;
 
 fn main() {
-    let mut mem: Memoized<F64Log2, F64Log2, F64Log2> = Memoized::new(/* max(r) */ 50);
+    let mut mem: Memoized<F64Log2, F64Log2, F64Log2> =
+        Memoized::new(/* max(r) */ 50, /* max(B) */ 20);
     mem.evaluate();
 
-    let mut mem: Memoized<BigInt, BigUint, SmartBigRational> = Memoized::new(/* max(r) */ 50);
+    let mut mem: Memoized<BigInt, BigUint, SmartBigRational> =
+        Memoized::new(/* max(r) */ 50, /* max(B) */ 20);
     mem.evaluate();
 }
 
@@ -26,6 +28,8 @@ fn main() {
 struct Memoized<I, D, T> {
     weight_poisson: Table3d<T>,
     choose: Table2d<I>,
+    binom_power: Table2d<T>,
+    binom_opposite_power: Table2d<T>,
     binom_t: Table2d<T>,
     table_h: HashMap<(u32, u32), i32>,
     table_pow: HashMap<(u32, u32), I>,
@@ -36,10 +40,12 @@ struct Memoized<I, D, T> {
 }
 
 impl<I: Clone, D, T: Clone> Memoized<I, D, T> {
-    fn new(rmax: u32) -> Self {
+    fn new(rmax: u32, bmax: usize) -> Self {
         Self {
             weight_poisson: Table3d::new([70, 70, rmax as usize + 1]),
             choose: Table2d::new([rmax as usize + 1, rmax as usize + 1]),
+            binom_power: Table2d::new([bmax + 1, rmax as usize + 1]),
+            binom_opposite_power: Table2d::new([bmax + 1, rmax as usize + 1]),
             binom_t: Table2d::new([rmax as usize + 1, rmax as usize + 1]),
             table_h: HashMap::default(),
             table_pow: HashMap::default(),
@@ -156,10 +162,12 @@ where
         let L = k - 1;
         self.binom_t = Table2d::new([self.rmax as usize + 1, self.rmax as usize + 1]);
         self.fmv = Table2d::new([self.rmax as usize + 1, self.rmax as usize + 1]);
+
         (self.table_h, self.N) = Self::generate_table_h(c, E);
+        let p = self.gsc(u, r, L, K, b, h, q).to_f64_log2();
         println!(
-            "- {title}: base_gs(2^{u}, {r}, 2^{L}, 2^{h}, 2^{q}) = 2^{}",
-            self.base_gs(u, r, L, h, q).to_f64_log2()
+            "- {title}: cover_gsc(2^{u}, {r}, 2^{L}, {K}, 2^{b}, 2^{h}, 2^{q}) = 2^{}",
+            p,
         );
     }
 
@@ -234,30 +242,81 @@ where
     /// `2^q` queries against a baseline GS construction with `2^u` owners, `r`
     /// layers of height `l`, on a hyper-tree of height `h`.
     ///
-    /// See https://sphincs.org/data/sphincs+-r3.1-specification.pdf.
-    #[expect(non_snake_case)]
-    fn base_gs(&mut self, u: u32, r: u32, L: u32, h: u32, q: u32) -> T {
+    /// See https://eprint.iacr.org/2026/2502.pdf, section 5.3.
+    #[expect(non_snake_case, clippy::too_many_arguments)]
+    fn gsc(&mut self, u: u32, r: u32, L: u32, K: u32, b: u32, h: u32, q: u32) -> T {
         let rate = T::from_log2(q) / T::from_log2(h);
+
+        let mut gsc_table = vec![None; self.rmax as usize + 1];
 
         let mut res = T::zero();
         for rr in 0..=self.rmax {
-            let cover = self.gs_cover(1 << u, r, 1 << L, rr);
+            let subcover = self.cover_bgsc(&mut gsc_table, 1 << u, r, 1 << L, b, rr);
+            eprintln!("rr={rr}: 2^{}^{K}", subcover.to_f64_log2());
+            let cover = subcover.powi(K);
+
             let poisson = Self::weight_poisson(&mut self.weight_poisson, rr, h, q, &rate);
             eprint!(
-                "rr={rr}: {} * {}",
+                "rr={rr}: 2^{} * 2^{}",
                 cover.to_f64_log2(),
                 poisson.to_f64_log2()
             );
             let product = cover * poisson;
-            eprint!(" = {}", product.to_f64_log2());
+            eprint!(" = 2^{}", product.to_f64_log2());
             res += product;
-            eprintln!(" -> {}", res.to_f64_log2());
+            eprintln!(" -> 2^{}", res.to_f64_log2());
         }
         res.reduced()
     }
 
+    fn cover_bgsc(
+        &mut self,
+        gsc_table: &mut [Option<T>],
+        o: u32,
+        r: u32,
+        t: u32,
+        b: u32,
+        q: u32,
+    ) -> T {
+        if b == 0 {
+            self.cover_gsc(gsc_table, o, r, t, q).clone()
+        } else {
+            (0..=q)
+                .map(|qq| {
+                    let binom = Self::binom_power(&mut self.binom_power, b, qq)
+                        * Self::binom_opposite_power(&mut self.binom_opposite_power, b, q - qq)
+                        * Self::choose(&mut self.choose, qq, q);
+                    let subcover = self.cover_gsc(gsc_table, o, r, t, qq);
+                    eprint!(
+                        "  qq={qq}: 2^{} * 2^{}",
+                        subcover.to_f64_log2(),
+                        binom.to_f64_log2()
+                    );
+                    let product = binom * subcover;
+                    eprintln!(" = 2^{}", product.to_f64_log2());
+                    product
+                })
+                .sum()
+        }
+    }
+
+    fn cover_gsc<'a>(
+        &mut self,
+        gsc_table: &'a mut [Option<T>],
+        o: u32,
+        r: u32,
+        t: u32,
+        q: u32,
+    ) -> &'a T {
+        let entry = &mut gsc_table[q as usize];
+        if entry.is_none() {
+            *entry = Some(self.cover_gsc_impl(o, r, t, q));
+        }
+        entry.as_ref().unwrap()
+    }
+
     #[expect(non_snake_case)]
-    fn gs_cover(&mut self, o: u32, r: u32, t: u32, q: u32) -> T {
+    fn cover_gsc_impl(&mut self, o: u32, r: u32, t: u32, q: u32) -> T {
         assert!(t > 1);
         assert!(self.N != 0);
         let tt = T::one() / T::from(t);
@@ -377,6 +436,36 @@ where
                 I::from(a).powi(n)
             }
         })
+    }
+
+    /// Returns 2^(-B * r)
+    #[expect(non_snake_case)]
+    fn binom_power(table: &mut Table2d<T>, B: u32, r: u32) -> &T {
+        let x = &mut table[[B as usize, r as usize]];
+        if x.is_none() {
+            let value = if r == 0 {
+                T::one()
+            } else {
+                (T::one() / T::from_log2(B)).powi(r)
+            };
+            *x = Some(value);
+        }
+        x.as_ref().unwrap()
+    }
+
+    /// Returns (1 - 2^-B)^r
+    #[expect(non_snake_case)]
+    fn binom_opposite_power(table: &mut Table2d<T>, B: u32, r: u32) -> &T {
+        let x = &mut table[[B as usize, r as usize]];
+        if x.is_none() {
+            let value = if r == 0 {
+                T::one()
+            } else {
+                (T::one() / T::from_log2(B)).one_minus_x().powi(r)
+            };
+            *x = Some(value);
+        }
+        x.as_ref().unwrap()
     }
 
     /// Probability that a Poisson distribution of parameter `rate = 2^(q - h)`
