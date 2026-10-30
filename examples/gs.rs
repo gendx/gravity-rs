@@ -362,6 +362,7 @@ where
                     )
                 })
                 .sum::<T>()
+                .reduced()
         });
 
         let matrix_qr = matrix_q.powi(r);
@@ -607,6 +608,11 @@ where
                 }
             }
         }
+        for i in 0..a {
+            for k in 0..d {
+                data[[i, k]].reduce();
+            }
+        }
         Matrix {
             data,
             _phantom: PhantomData,
@@ -649,6 +655,10 @@ where
         let &[a, b] = self.data.size();
         assert_eq!(a, b);
         let mut result = Self::identity(a);
+
+        if n == 0 {
+            return result;
+        }
 
         let mut power: Self = self.clone();
         loop {
