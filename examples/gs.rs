@@ -3,13 +3,13 @@ use num::{BigInt, BigRational, BigUint, One, ToPrimitive, Zero};
 use smart_big_rational::{
     Denom, DenomRef, DenomSparseU16, SmartBigRational as SmartBigRationalImpl,
 };
-use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::marker::PhantomData;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub};
 
+type HashMap<K, V> = std::collections::HashMap<K, V, rustc_hash::FxBuildHasher>;
 type Table2d<T> = ndtable::Table2d<Option<T>>;
 type Table3d<T> = ndtable::Table3d<Option<T>>;
 type SmartBigRational = SmartBigRationalImpl<DenomSparseU16<6542, 16>>;
