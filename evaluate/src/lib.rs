@@ -83,6 +83,8 @@ pub trait Rational<I: Integer, D: Denominator>:
 
     fn one() -> Self;
 
+    fn is_zero(&self) -> bool;
+
     fn from(x: u32) -> Self;
 
     fn from_log2(x: u32) -> Self;
@@ -110,6 +112,15 @@ pub struct F64Log2(f64);
 
 impl Div for F64Log2 {
     type Output = Self;
+
+    #[expect(clippy::suspicious_arithmetic_impl)]
+    fn div(self, rhs: Self) -> Self::Output {
+        F64Log2(self.0 - rhs.0)
+    }
+}
+
+impl Div for &F64Log2 {
+    type Output = F64Log2;
 
     #[expect(clippy::suspicious_arithmetic_impl)]
     fn div(self, rhs: Self) -> Self::Output {
@@ -275,6 +286,10 @@ impl Rational<F64Log2, F64Log2> for F64Log2 {
         F64Log2(0.0)
     }
 
+    fn is_zero(&self) -> bool {
+        self.0 == f64::NEG_INFINITY
+    }
+
     fn from(x: u32) -> Self {
         F64Log2((x as f64).log2())
     }
@@ -352,20 +367,6 @@ impl Integer for BigInt {
     }
 }
 
-impl Denominator for BigInt {
-    fn one() -> Self {
-        <BigInt as One>::one()
-    }
-
-    fn from(x: u32) -> Self {
-        x.into()
-    }
-
-    fn powi(&self, n: u32) -> Self {
-        self.pow(n)
-    }
-}
-
 fn biguint_log2(x: &BigUint) -> f64 {
     let bits = x.bits();
     if bits == 0 {
@@ -380,6 +381,20 @@ fn biguint_log2(x: &BigUint) -> f64 {
     }
 }
 
+impl Denominator for BigInt {
+    fn one() -> Self {
+        <BigInt as One>::one()
+    }
+
+    fn from(x: u32) -> Self {
+        x.into()
+    }
+
+    fn powi(&self, n: u32) -> Self {
+        self.pow(n)
+    }
+}
+
 impl Rational<BigInt, BigInt> for BigRational {
     fn from_ratio(num: BigInt, denom: BigInt) -> Self {
         BigRational::new(num, denom)
@@ -391,6 +406,10 @@ impl Rational<BigInt, BigInt> for BigRational {
 
     fn one() -> Self {
         <BigRational as One>::one()
+    }
+
+    fn is_zero(&self) -> bool {
+        Zero::is_zero(self)
     }
 
     fn from(x: u32) -> Self {
@@ -450,6 +469,10 @@ where
 
     fn one() -> Self {
         Self::ONE
+    }
+
+    fn is_zero(&self) -> bool {
+        Zero::is_zero(self)
     }
 
     fn from(x: u32) -> Self {

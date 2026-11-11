@@ -1,22 +1,23 @@
-use num::{BigInt, BigRational, ToPrimitive, Zero};
-use smart_big_rational::{
-    Denom, DenomRef, DenomSparseU16, SmartBigRational as SmartBigRationalImpl,
-};
+use evaluate::{Denominator, F64Log2, Integer, Rational};
+use num::{BigInt, BigUint};
+use smart_big_rational::{DenomSparseU16, SmartBigRational as SmartBigRationalImpl};
 use std::fmt::Debug;
-use std::iter::Sum;
-use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
+use std::marker::PhantomData;
+use std::ops::{Div, Mul};
 use std::time::Instant;
 
 type SmartBigRational = SmartBigRationalImpl<DenomSparseU16<6542, 16>>;
 
 fn main() {
-    evaluate::<F64Log2>();
-    evaluate::<SmartBigRational>();
+    evaluate::<F64Log2, F64Log2, F64Log2>();
+    evaluate::<BigInt, BigUint, SmartBigRational>();
 }
 
-fn evaluate<T>()
+fn evaluate<I, D, T>()
 where
-    T: Arithmetic + Debug + Clone,
+    I: Integer + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
     for<'a> &'a T: Div<&'a T, Output = T>,
 {
@@ -62,9 +63,11 @@ where
     octopus_size_complete_cutoff(16, 28, -12.5);
 }
 
-fn evaluate_slh_dsa<T>(title: &str, h: u32, k: u32)
+fn evaluate_slh_dsa<I, D, T>(title: &str, h: u32, k: u32)
 where
-    T: Arithmetic + Debug + Clone,
+    I: Integer + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
     for<'a> &'a T: Div<&'a T, Output = T>,
 {
@@ -72,9 +75,11 @@ where
     octopus_size_distribution(k << h, k);
 }
 
-fn evaluate_gravity_sphincs<T>(title: &str, h: u32, k: u32)
+fn evaluate_gravity_sphincs<I, D, T>(title: &str, h: u32, k: u32)
 where
-    T: Arithmetic + Debug + Clone,
+    I: Integer + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
     for<'a> &'a T: Div<&'a T, Output = T>,
 {
@@ -85,13 +90,15 @@ where
 /// Computes the size distribution of a bucketized PORS Octopus (BPORS) as
 /// described in https://eprint.iacr.org/2026/1328.
 #[expect(non_snake_case)]
-fn octopus_size_bpors_complete_distribution<T>(h: u32, k: u32, B: u32, K: u32)
+fn octopus_size_bpors_complete_distribution<I, D, T>(h: u32, k: u32, B: u32, K: u32)
 where
-    T: Arithmetic + Debug + Clone,
+    I: Integer + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
     let start = Instant::now();
-    let mut mem: MemoizedComplete<T> = MemoizedComplete::new(k as usize, h as usize);
+    let mut mem: MemoizedComplete<I, D, T> = MemoizedComplete::new(k as usize, h as usize);
 
     let mut baseline = Vec::new();
     let mut sum = T::zero();
@@ -133,14 +140,16 @@ where
 /// Computes the size distribution of a bucketized PORS Octopus (BPORS) as
 /// described in https://eprint.iacr.org/2026/1328.
 #[expect(non_snake_case)]
-fn octopus_size_bpors_distribution<T>(t: u32, k: u32, B: u32, K: u32)
+fn octopus_size_bpors_distribution<I, D, T>(t: u32, k: u32, B: u32, K: u32)
 where
-    T: Arithmetic + Debug + Clone,
+    I: Integer + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
     for<'a> &'a T: Div<&'a T, Output = T>,
 {
     let start = Instant::now();
-    let mut mem: Memoized<T> = Memoized::new(k as usize, t as usize);
+    let mut mem: Memoized<I, D, T> = Memoized::new(k as usize, t as usize);
 
     let mut baseline = Vec::new();
     let mut sum = T::zero();
@@ -180,9 +189,11 @@ where
 }
 
 /// Computes the power of a probability distribution using fast exponentiation.
-fn convoluted_exponent<T>(distribution: &[T], mut n: u32) -> Vec<T>
+fn convoluted_exponent<I, D, T>(distribution: &[T], mut n: u32) -> Vec<T>
 where
-    T: Arithmetic + Clone,
+    I: Integer + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
     let mut result = vec![T::one(); 1];
@@ -201,9 +212,11 @@ where
 }
 
 /// Computes the convolution of two probability distributions.
-fn convolution<T>(a: &[T], b: &[T]) -> Vec<T>
+fn convolution<I, D, T>(a: &[T], b: &[T]) -> Vec<T>
 where
-    T: Arithmetic + Clone,
+    I: Integer + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
     let mut product = vec![T::zero(); a.len() + b.len() - 1];
@@ -218,13 +231,15 @@ where
 
 /// Computes the size distribution of a PORS Octopus in a complete Merkle tree
 /// of height `h` as described in https://eprint.iacr.org/2025/2069.
-fn octopus_size_complete_distribution<T>(h: u32, k: u32)
+fn octopus_size_complete_distribution<I, D, T>(h: u32, k: u32)
 where
-    T: Arithmetic + Debug + Clone,
+    I: Integer + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
     let start = Instant::now();
-    let mut mem: MemoizedComplete<T> = MemoizedComplete::new(k as usize, h as usize);
+    let mut mem: MemoizedComplete<I, D, T> = MemoizedComplete::new(k as usize, h as usize);
 
     let mut sum = T::zero();
     for m in 0..=k * h {
@@ -245,13 +260,15 @@ where
     println!("Completed in {:?}", Instant::now().duration_since(start));
 }
 
-fn octopus_size_complete_cutoff<T>(h: u32, k: u32, threshold: f64)
+fn octopus_size_complete_cutoff<I, D, T>(h: u32, k: u32, threshold: f64)
 where
-    T: Arithmetic + Debug + Clone,
+    I: Integer + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
     let start = Instant::now();
-    let mut mem: MemoizedComplete<T> = MemoizedComplete::new(k as usize, h as usize);
+    let mut mem: MemoizedComplete<I, D, T> = MemoizedComplete::new(k as usize, h as usize);
 
     let mut sum = T::zero();
     for m in 0..=k * h {
@@ -273,14 +290,16 @@ where
 
 /// Computes the size distribution of a PORS Octopus in an arbitrary Merkle tree
 /// with `t` leaves as described in https://eprint.iacr.org/2025/2069.
-fn octopus_size_distribution<T>(t: u32, k: u32)
+fn octopus_size_distribution<I, D, T>(t: u32, k: u32)
 where
-    T: Arithmetic + Debug + Clone,
+    I: Integer + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
     for<'a> &'a T: Div<&'a T, Output = T>,
 {
     let start = Instant::now();
-    let mut mem: Memoized<T> = Memoized::new(k as usize, t as usize);
+    let mut mem: Memoized<I, D, T> = Memoized::new(k as usize, t as usize);
 
     let mut sum = T::zero();
     for m in 0..=(k * t.next_power_of_two().ilog2()).min(t) {
@@ -301,14 +320,16 @@ where
     println!("Completed in {:?}", Instant::now().duration_since(start));
 }
 
-fn octopus_size_cutoff<T>(t: u32, k: u32, threshold: f64)
+fn octopus_size_cutoff<I, D, T>(t: u32, k: u32, threshold: f64)
 where
-    T: Arithmetic + Debug + Clone,
+    I: Integer + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Debug + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
     for<'a> &'a T: Div<&'a T, Output = T>,
 {
     let start = Instant::now();
-    let mut mem: Memoized<T> = Memoized::new(k as usize, t as usize);
+    let mut mem: Memoized<I, D, T> = Memoized::new(k as usize, t as usize);
 
     let mut sum = T::zero();
     for m in 0..=(k * t.next_power_of_two().ilog2()).min(t) {
@@ -328,15 +349,21 @@ where
     println!("Completed in {:?}", Instant::now().duration_since(start));
 }
 
-struct MemoizedComplete<T> {
+struct MemoizedComplete<I, D, T> {
     zero: T,
     choose: Table2d<T>,
     choose_h: Table2d<T>,
     siblings: Table3d<T>,
     size: Table3d<T>,
+    _phantom: PhantomData<(I, D)>,
 }
 
-impl<T: Arithmetic + Clone> MemoizedComplete<T> {
+impl<I, D, T> MemoizedComplete<I, D, T>
+where
+    I: Integer,
+    D: Denominator,
+    T: Rational<I, D> + Clone,
+{
     fn new(k: usize, h: usize) -> Self {
         Self {
             zero: T::zero(),
@@ -344,6 +371,7 @@ impl<T: Arithmetic + Clone> MemoizedComplete<T> {
             choose_h: Table2d::new([k + 1, h + 1]),
             siblings: Table3d::new([h + 1, k + 1, k + 1]),
             size: Table3d::new([h + 1, k + 1, k * h + 1]),
+            _phantom: PhantomData,
         }
     }
 
@@ -355,9 +383,11 @@ impl<T: Arithmetic + Clone> MemoizedComplete<T> {
     }
 }
 
-impl<T> MemoizedComplete<T>
+impl<I, D, T> MemoizedComplete<I, D, T>
 where
-    T: Arithmetic,
+    I: Integer,
+    D: Denominator,
+    T: Rational<I, D>,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
     fn size(&mut self, h: u32, k: u32, m: u32) -> &T {
@@ -495,14 +525,15 @@ where
     }
 }
 
-struct Memoized<T> {
+struct Memoized<I, D, T> {
     choose: SparseTable2d<T>,
     choose_inv: SparseTable2d<T>,
     siblings: SparseTable3d<T>,
     size: SparseTable5d<T>,
+    _phantom: PhantomData<(I, D)>,
 }
 
-impl<T: Clone> Memoized<T> {
+impl<I, D, T: Clone> Memoized<I, D, T> {
     fn new(k: usize, t: usize) -> Self {
         let h = t.ilog2() as usize;
         Self {
@@ -513,6 +544,7 @@ impl<T: Clone> Memoized<T> {
                 [h + 1, k + 1, k + 1, 3, (k * (h + 1)).min(t) + 1],
                 Default::default(),
             ),
+            _phantom: PhantomData,
         }
     }
 
@@ -524,9 +556,11 @@ impl<T: Clone> Memoized<T> {
     }
 }
 
-impl<T: Clone> Memoized<T>
+impl<I, D, T> Memoized<I, D, T>
 where
-    T: Arithmetic,
+    I: Integer,
+    D: Denominator,
+    T: Rational<I, D> + Clone,
     for<'a> &'a T: Mul<&'a T, Output = T>,
     for<'a> &'a T: Div<&'a T, Output = T>,
 {
@@ -1069,18 +1103,23 @@ where
         let index = [n as usize, among as usize];
         table
             .entry(index)
-            .or_insert_with(|| choose_impl::<T>(n, among).reduced())
+            .or_insert_with(|| choose_impl::<I, D, T>(n, among).reduced())
     }
 
     fn choose_inv(table: &mut SparseTable2d<T>, n: u32, among: u32) -> &T {
         let index = [n as usize, among as usize];
         table
             .entry(index)
-            .or_insert_with(|| (T::one() / choose_impl::<T>(n, among)).reduced())
+            .or_insert_with(|| (T::one() / choose_impl::<I, D, T>(n, among)).reduced())
     }
 }
 
-fn choose_impl<T: Arithmetic>(n: u32, among: u32) -> T {
+fn choose_impl<I, D, T>(n: u32, among: u32) -> T
+where
+    I: Integer,
+    D: Denominator,
+    T: Rational<I, D>,
+{
     if n > among {
         return T::zero();
     }
@@ -1089,239 +1128,6 @@ fn choose_impl<T: Arithmetic>(n: u32, among: u32) -> T {
         res *= T::from(among - i) / T::from(i + 1);
     }
     res
-}
-
-trait Arithmetic:
-    Mul<Output = Self>
-    + Div<Output = Self>
-    + AddAssign
-    + MulAssign
-    + Sum
-    + for<'a> Mul<&'a Self, Output = Self>
-    + for<'a> Div<&'a Self, Output = Self>
-    + for<'a> AddAssign<&'a Self>
-{
-    fn zero() -> Self;
-
-    fn one() -> Self;
-
-    fn is_zero(&self) -> bool;
-
-    fn from(x: u32) -> Self;
-
-    fn from_log2(x: u32) -> Self;
-
-    #[cfg(test)]
-    fn from_ratio(num: u32, denom: u32) -> Self {
-        Self::from(num) / Self::from(denom)
-    }
-
-    fn to_f64(&self) -> f64;
-
-    fn to_f64_log2(&self) -> f64;
-
-    fn reduce(&mut self) {}
-
-    fn reduced(mut self) -> Self {
-        self.reduce();
-        self
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct F64Log2(f64);
-
-impl Div for F64Log2 {
-    type Output = Self;
-
-    #[expect(clippy::suspicious_arithmetic_impl)]
-    fn div(self, rhs: Self) -> Self::Output {
-        F64Log2(self.0 - rhs.0)
-    }
-}
-
-impl Div for &F64Log2 {
-    type Output = F64Log2;
-
-    #[expect(clippy::suspicious_arithmetic_impl)]
-    fn div(self, rhs: Self) -> Self::Output {
-        F64Log2(self.0 - rhs.0)
-    }
-}
-
-impl Div<&Self> for F64Log2 {
-    type Output = Self;
-
-    #[expect(clippy::suspicious_arithmetic_impl)]
-    fn div(self, rhs: &Self) -> Self::Output {
-        F64Log2(self.0 - rhs.0)
-    }
-}
-
-impl Mul for F64Log2 {
-    type Output = Self;
-
-    #[expect(clippy::suspicious_arithmetic_impl)]
-    fn mul(self, rhs: Self) -> Self::Output {
-        F64Log2(self.0 + rhs.0)
-    }
-}
-
-impl Mul for &F64Log2 {
-    type Output = F64Log2;
-
-    #[expect(clippy::suspicious_arithmetic_impl)]
-    fn mul(self, rhs: Self) -> Self::Output {
-        F64Log2(self.0 + rhs.0)
-    }
-}
-
-impl Mul<&Self> for F64Log2 {
-    type Output = Self;
-
-    #[expect(clippy::suspicious_arithmetic_impl)]
-    fn mul(self, rhs: &Self) -> Self::Output {
-        F64Log2(self.0 + rhs.0)
-    }
-}
-
-impl Add for F64Log2 {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        if self.0 < rhs.0 {
-            rhs + self
-        } else if rhs.0 == f64::NEG_INFINITY {
-            self
-        } else {
-            F64Log2(self.0 + 2.0_f64.powf(rhs.0 - self.0).ln_1p() / std::f64::consts::LN_2)
-        }
-    }
-}
-
-impl AddAssign for F64Log2 {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs;
-    }
-}
-
-impl AddAssign<&Self> for F64Log2 {
-    fn add_assign(&mut self, rhs: &Self) {
-        *self = *self + *rhs;
-    }
-}
-
-impl MulAssign for F64Log2 {
-    #[expect(clippy::suspicious_op_assign_impl)]
-    fn mul_assign(&mut self, rhs: Self) {
-        self.0 += rhs.0;
-    }
-}
-
-impl Sum for F64Log2 {
-    fn sum<I>(iter: I) -> Self
-    where
-        I: Iterator<Item = Self>,
-    {
-        iter.fold(Self::zero(), |acc, x| acc + x)
-    }
-}
-
-impl Arithmetic for F64Log2 {
-    fn zero() -> Self {
-        F64Log2(f64::NEG_INFINITY)
-    }
-
-    fn one() -> Self {
-        F64Log2(0.0)
-    }
-
-    fn is_zero(&self) -> bool {
-        self.0 == f64::NEG_INFINITY
-    }
-
-    fn from(x: u32) -> Self {
-        F64Log2((x as f64).log2())
-    }
-
-    fn from_log2(x: u32) -> Self {
-        F64Log2(x as f64)
-    }
-
-    fn to_f64(&self) -> f64 {
-        2.0_f64.powf(self.0)
-    }
-
-    fn to_f64_log2(&self) -> f64 {
-        self.0
-    }
-}
-
-impl Arithmetic for BigRational {
-    fn zero() -> Self {
-        BigRational::from_integer(BigInt::from(0))
-    }
-
-    fn one() -> Self {
-        BigRational::from_integer(BigInt::from(1))
-    }
-
-    fn is_zero(&self) -> bool {
-        Zero::is_zero(self)
-    }
-
-    fn from(x: u32) -> Self {
-        BigRational::from_integer(BigInt::from(x))
-    }
-
-    fn from_log2(x: u32) -> Self {
-        BigRational::from_integer(BigInt::from(1) << x)
-    }
-
-    fn to_f64(&self) -> f64 {
-        ToPrimitive::to_f64(self).unwrap()
-    }
-
-    fn to_f64_log2(&self) -> f64 {
-        Arithmetic::to_f64(self).log2()
-    }
-}
-
-impl<D: Denom> Arithmetic for SmartBigRationalImpl<D>
-where
-    for<'a> &'a D: DenomRef<D>,
-{
-    fn zero() -> Self {
-        Self::ZERO
-    }
-
-    fn one() -> Self {
-        Self::ONE
-    }
-
-    fn is_zero(&self) -> bool {
-        Zero::is_zero(self)
-    }
-
-    fn from(x: u32) -> Self {
-        Self::ratio(x, D::ONE)
-    }
-
-    fn from_log2(x: u32) -> Self {
-        Self::ratio(BigInt::from(1) << x, D::ONE)
-    }
-
-    fn to_f64(&self) -> f64 {
-        Arithmetic::to_f64(&self.to_big_rational())
-    }
-
-    fn to_f64_log2(&self) -> f64 {
-        self.to_f64().log2()
-    }
-
-    fn reduce(&mut self) {
-        self.reduce();
-    }
 }
 
 type Table2d<T> = ndtable::Table2d<Option<T>>;
@@ -1354,15 +1160,16 @@ fn debug_sparse_table<T, const N: usize, S>(table: &ndtable::SparseTableNd<T, N,
 #[cfg(test)]
 mod test {
     use super::*;
+    use num::{BigRational, Zero};
 
     fn test_distribution(k: u32, t: u32, expected: &[u32], denom: u32) {
         assert_eq!(expected.len(), t as usize + 1);
 
-        let mut mem: Memoized<BigRational> = Memoized::new(k as usize, t as usize);
+        let mut mem: Memoized<BigInt, BigInt, BigRational> = Memoized::new(k as usize, t as usize);
         for m in 0..=t {
             assert_eq!(
                 mem.size(t, k, m),
-                BigRational::from_ratio(expected[m as usize], denom),
+                BigRational::from_ratio(expected[m as usize].into(), denom.into()),
                 "t={t} k={k} m={m}"
             );
         }
@@ -1396,8 +1203,9 @@ mod test {
         for h in 0..=5 {
             let t = 1 << h;
             for k in 1..=t {
-                let mut mem: Memoized<BigRational> = Memoized::new(k as usize, t as usize);
-                let mut mem_complete: MemoizedComplete<BigRational> =
+                let mut mem: Memoized<BigInt, BigInt, BigRational> =
+                    Memoized::new(k as usize, t as usize);
+                let mut mem_complete: MemoizedComplete<BigInt, BigInt, BigRational> =
                     MemoizedComplete::new(k as usize, h as usize);
                 for m in 0..=t {
                     assert_eq!(
@@ -1414,7 +1222,8 @@ mod test {
     fn test_one_leaf() {
         for t in 1u32..=32 {
             let k = 1;
-            let mut mem: Memoized<BigRational> = Memoized::new(k as usize, t as usize);
+            let mut mem: Memoized<BigInt, BigInt, BigRational> =
+                Memoized::new(k as usize, t as usize);
 
             let h = t.next_power_of_two().ilog2();
             let right = (1 << h) - t;
@@ -1425,14 +1234,14 @@ mod test {
             let p_left = mem.size(t, k, h);
             assert_eq!(
                 p_left,
-                BigRational::from_ratio(left, t),
+                BigRational::from_ratio(left.into(), t.into()),
                 "size_left({t}, {k}, {}) = {p_left} != {left}/{t}",
                 h
             );
             let p_right = mem.size(t, k, h - 1);
             assert_eq!(
                 p_right,
-                BigRational::from_ratio(right, t),
+                BigRational::from_ratio(right.into(), t.into()),
                 "size_right({t}, {k}, {}) = {p_right} != {right}/{t}",
                 h - 1
             );
@@ -1444,9 +1253,9 @@ mod test {
         for h in 0..=7 {
             let t = 1 << h;
             for k in 1..=t {
-                let mut mem: MemoizedComplete<BigRational> =
+                let mut mem: MemoizedComplete<BigInt, BigInt, BigRational> =
                     MemoizedComplete::new(k as usize, h as usize);
-                let mut sum = <BigRational as Arithmetic>::zero();
+                let mut sum: BigRational = Zero::zero();
                 for m in 0..=t {
                     let p = mem.size(h, k, m);
                     println!("size(2^{h}, {k}, {m}) = {p}");
@@ -1461,8 +1270,9 @@ mod test {
     fn test_distributions_are_full() {
         for t in 1..=32 {
             for k in 1..=t {
-                let mut mem: Memoized<BigRational> = Memoized::new(k as usize, t as usize);
-                let mut sum = <BigRational as Arithmetic>::zero();
+                let mut mem: Memoized<BigInt, BigInt, BigRational> =
+                    Memoized::new(k as usize, t as usize);
+                let mut sum: BigRational = Zero::zero();
                 for m in 0..=t {
                     let p = mem.size(t, k, m);
                     println!("size({t}, {k}, {m}) = {p}");
