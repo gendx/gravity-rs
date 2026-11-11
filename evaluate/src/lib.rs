@@ -1,15 +1,19 @@
 use num::bigint::Sign;
+use num::traits::Pow;
 use num::{BigInt, BigRational, BigUint, One, ToPrimitive, Zero};
+use smart_big_rational::{Denom, DenomRef, SmartBigRational};
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub};
 
 pub trait Integer:
-    Mul<Output = Self>
+    Sub<Output = Self>
+    + Mul<Output = Self>
     + Div<Output = Self>
     + AddAssign
     + MulAssign
     + Sum
+    + for<'a> Mul<&'a Self, Output = Self>
     + for<'a> AddAssign<&'a Self>
     + for<'a> MulAssign<&'a Self>
 {
@@ -20,6 +24,8 @@ pub trait Integer:
     fn is_zero(&self) -> bool;
 
     fn from(x: u32) -> Self;
+
+    fn powi(&self, n: u32) -> Self;
 
     fn choose(n: u32, among: u32) -> Self {
         if n > among {
@@ -35,8 +41,30 @@ pub trait Integer:
     fn to_f64_log2(&self) -> f64;
 }
 
-pub trait Rational<I: Integer>:
-    Mul<Output = Self>
+pub trait Denominator:
+    Sized + Mul<Output = Self> + Div<Output = Self> + MulAssign + for<'a> MulAssign<&'a Self>
+{
+    fn one() -> Self;
+
+    fn from(x: u32) -> Self;
+
+    fn powi(&self, n: u32) -> Self;
+
+    fn choose(n: u32, among: u32) -> Self {
+        if n > among {
+            panic!("Division by zero");
+        }
+        let mut res = Self::one();
+        for i in 0..n {
+            res *= Self::from(among - i) / Self::from(i + 1);
+        }
+        res
+    }
+}
+
+pub trait Rational<I: Integer, D: Denominator>:
+    Add<Output = Self>
+    + Mul<Output = Self>
     + Div<Output = Self>
     + Sub<Output = Self>
     + AddAssign
@@ -49,7 +77,7 @@ pub trait Rational<I: Integer>:
     + for<'a> MulAssign<&'a Self>
     + for<'a> Mul<&'a I, Output = Self>
 {
-    fn from_ratio(num: I, denom: I) -> Self;
+    fn from_ratio(num: I, denom: D) -> Self;
 
     fn zero() -> Self;
 
@@ -68,9 +96,16 @@ pub trait Rational<I: Integer>:
     fn one_minus_x(&self) -> Self;
 
     fn exp(&self) -> Self;
+
+    fn reduce(&mut self) {}
+
+    fn reduced(mut self) -> Self {
+        self.reduce();
+        self
+    }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct F64Log2(f64);
 
 impl Div for F64Log2 {
@@ -183,7 +218,7 @@ impl Sum for F64Log2 {
     where
         I: Iterator<Item = Self>,
     {
-        iter.fold(<Self as Rational<Self>>::zero(), |acc, x| acc + x)
+        iter.fold(<Self as Rational<Self, Self>>::zero(), |acc, x| acc + x)
     }
 }
 
@@ -204,12 +239,30 @@ impl Integer for F64Log2 {
         F64Log2((x as f64).log2())
     }
 
+    fn powi(&self, n: u32) -> Self {
+        F64Log2(n as f64 * self.0)
+    }
+
     fn to_f64_log2(&self) -> f64 {
         self.0
     }
 }
 
-impl Rational<F64Log2> for F64Log2 {
+impl Denominator for F64Log2 {
+    fn one() -> Self {
+        F64Log2(0.0)
+    }
+
+    fn from(x: u32) -> Self {
+        F64Log2((x as f64).log2())
+    }
+
+    fn powi(&self, n: u32) -> Self {
+        F64Log2(n as f64 * self.0)
+    }
+}
+
+impl Rational<F64Log2, F64Log2> for F64Log2 {
     fn from_ratio(num: F64Log2, denom: F64Log2) -> Self {
         num / denom
     }
@@ -268,6 +321,10 @@ impl Integer for BigInt {
         x.into()
     }
 
+    fn powi(&self, n: u32) -> Self {
+        self.pow(n)
+    }
+
     fn choose(n: u32, among: u32) -> Self {
         if n > among {
             return <Self as Integer>::zero();
@@ -295,6 +352,20 @@ impl Integer for BigInt {
     }
 }
 
+impl Denominator for BigInt {
+    fn one() -> Self {
+        <BigInt as One>::one()
+    }
+
+    fn from(x: u32) -> Self {
+        x.into()
+    }
+
+    fn powi(&self, n: u32) -> Self {
+        self.pow(n)
+    }
+}
+
 fn biguint_log2(x: &BigUint) -> f64 {
     let bits = x.bits();
     if bits == 0 {
@@ -309,7 +380,7 @@ fn biguint_log2(x: &BigUint) -> f64 {
     }
 }
 
-impl Rational<BigInt> for BigRational {
+impl Rational<BigInt, BigInt> for BigRational {
     fn from_ratio(num: BigInt, denom: BigInt) -> Self {
         BigRational::new(num, denom)
     }
@@ -351,6 +422,71 @@ impl Rational<BigInt> for BigRational {
     }
 }
 
+impl Denominator for BigUint {
+    fn one() -> Self {
+        <BigUint as One>::one()
+    }
+
+    fn from(x: u32) -> Self {
+        x.into()
+    }
+
+    fn powi(&self, n: u32) -> Self {
+        self.pow(n)
+    }
+}
+
+impl<D: Denom> Rational<BigInt, BigUint> for SmartBigRational<D>
+where
+    for<'a> &'a D: DenomRef<D>,
+{
+    fn from_ratio(num: BigInt, denom: BigUint) -> Self {
+        Self::ratio(num, denom)
+    }
+
+    fn zero() -> Self {
+        Self::ZERO
+    }
+
+    fn one() -> Self {
+        Self::ONE
+    }
+
+    fn from(x: u32) -> Self {
+        Self::ratio(x, D::one())
+    }
+
+    fn from_log2(x: u32) -> Self {
+        Self::ratio(<BigInt as Integer>::one() << x, D::one())
+    }
+
+    fn to_f64(&self) -> f64 {
+        Rational::to_f64(&self.to_big_rational())
+    }
+
+    fn to_f64_log2(&self) -> f64 {
+        self.to_f64().log2()
+    }
+
+    fn powi(&self, n: u32) -> Self {
+        self.pow(n)
+    }
+
+    fn one_minus_x(&self) -> Self {
+        Self::ONE - self
+    }
+
+    fn exp(&self) -> Self {
+        BigRational::from_float(Rational::to_f64(self).exp())
+            .unwrap()
+            .into()
+    }
+
+    fn reduce(&mut self) {
+        self.reduce();
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -383,13 +519,15 @@ mod test {
         );
         assert_eq!(
             Integer::to_f64_log2(
-                &(<F64Log2 as Integer>::from(2).powi(10_000) + <F64Log2 as Integer>::from(2))
+                &(Integer::powi(&<F64Log2 as Integer>::from(2), 10_000)
+                    + <F64Log2 as Integer>::from(2))
             ),
             10_000.0
         );
         assert_eq!(
             Integer::to_f64_log2(
-                &(<F64Log2 as Integer>::from(2) + <F64Log2 as Integer>::from(2).powi(10_000))
+                &(<F64Log2 as Integer>::from(2)
+                    + Integer::powi(&<F64Log2 as Integer>::from(2), 10_000))
             ),
             10_000.0
         );
@@ -399,12 +537,13 @@ mod test {
     fn test_f64log2_powi() {
         for i in 0..=10_000 {
             assert_eq!(
-                Integer::to_f64_log2(&<F64Log2 as Integer>::from(2).powi(i)),
+                Integer::to_f64_log2(&Integer::powi(&<F64Log2 as Integer>::from(2), i)),
                 i as f64
             );
             assert_eq!(
                 Integer::to_f64_log2(
-                    &(<F64Log2 as Integer>::one() / <F64Log2 as Integer>::from(2)).powi(i)
+                    &(<F64Log2 as Integer>::one()
+                        / Integer::powi(&<F64Log2 as Integer>::from(2), i))
                 ),
                 -(i as f64)
             );

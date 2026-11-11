@@ -1,27 +1,29 @@
-use evaluate::{F64Log2, Integer, Rational};
+use evaluate::{Denominator, F64Log2, Integer, Rational};
 use num::{BigInt, BigRational};
 use std::fmt::Debug;
+use std::marker::PhantomData;
 use std::ops::Mul;
 
 fn main() {
-    let mut mem: Memoized<F64Log2, F64Log2> =
+    let mut mem: Memoized<F64Log2, F64Log2, F64Log2> =
         Memoized::new(/* max(r) */ 50, /* max(B) */ 20);
     mem.evaluate();
 
-    let mut mem: Memoized<BigInt, BigRational> =
+    let mut mem: Memoized<BigInt, BigInt, BigRational> =
         Memoized::new(/* max(r) */ 50, /* max(B) */ 20);
     mem.evaluate();
 }
 
-struct Memoized<I, T> {
+struct Memoized<I, D, T> {
     weight_poisson: Table3d<T>,
     choose: Table2d<I>,
     binom_power: Table2d<T>,
     binom_opposite_power: Table2d<T>,
     rmax: u32,
+    _phantom: PhantomData<D>,
 }
 
-impl<I: Clone, T: Clone> Memoized<I, T> {
+impl<I: Clone, D, T: Clone> Memoized<I, D, T> {
     fn new(rmax: u32, bmax: usize) -> Self {
         Self {
             weight_poisson: Table3d::new([70, 70, rmax as usize + 1]),
@@ -29,14 +31,16 @@ impl<I: Clone, T: Clone> Memoized<I, T> {
             binom_power: Table2d::new([bmax + 1, rmax as usize + 1]),
             binom_opposite_power: Table2d::new([bmax + 1, rmax as usize + 1]),
             rmax,
+            _phantom: PhantomData,
         }
     }
 }
 
-impl<I, T> Memoized<I, T>
+impl<I, D, T> Memoized<I, D, T>
 where
     I: Integer + Clone,
-    T: Rational<I> + Debug + Clone,
+    D: Denominator + Clone,
+    T: Rational<I, D> + Debug + Clone,
     for<'a> &'a I: Mul<&'a I, Output = I>,
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
@@ -234,12 +238,12 @@ where
         let kr_max = (k * self.rmax).min(t);
 
         let size_table = self.pors_size_table(k, t);
-        let choose_kt = Self::choose_impl(k, t);
-        let mut choose_kt_power = I::one();
+        let choose_kt = D::choose(k, t);
+        let mut choose_kt_power = D::one();
 
         // Table of `cover_pors(k, t, revealed)`, scaled by `choose(k, t)`.
         let cover_pors_table: Vec<I> = (0..=kr_max)
-            .map(|revealed| Self::choose_impl(k, revealed))
+            .map(|revealed| I::choose(k, revealed))
             .collect();
 
         let rate = T::from_log2(q) / T::from_log2(h);
@@ -285,7 +289,7 @@ where
                 // but we let the caller divide once at the end, which allows
                 // working on big integers rather than big rationals, which is
                 // much faster.
-                let value = Self::choose_impl(j, i) * Self::choose_impl(k - j, t - i);
+                let value = I::choose(j, i) * I::choose(k - j, t - i);
                 sum += &value;
                 if !value.is_zero() {
                     eprintln!("  overlap[{t}, {k}, {i}, {j}] = {}", value.to_f64_log2());
@@ -406,14 +410,10 @@ where
     fn choose(table: &mut Table2d<I>, n: u32, among: u32) -> &I {
         let x = &mut table[[n as usize, among as usize]];
         if x.is_none() {
-            let value = Self::choose_impl(n, among);
+            let value = I::choose(n, among);
             *x = Some(value);
         }
         x.as_ref().unwrap()
-    }
-
-    fn choose_impl(n: u32, among: u32) -> I {
-        I::choose(n, among)
     }
 
     /// Returns 2^(-B * r)
