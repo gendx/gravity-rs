@@ -352,7 +352,8 @@ where
 struct MemoizedComplete<I, D, T> {
     zero: T,
     choose: Table2d<I>,
-    choose_h: Table2d<T>,
+    choose_h: Table2d<I>,
+    choose_h_inv: Table2d<T>,
     siblings: Table3d<T>,
     size: Table3d<T>,
     _phantom: PhantomData<D>,
@@ -369,6 +370,7 @@ where
             zero: T::zero(),
             choose: Table2d::new([k + 1, k + 1]),
             choose_h: Table2d::new([k + 1, h + 1]),
+            choose_h_inv: Table2d::new([k + 1, h + 1]),
             siblings: Table3d::new([h + 1, k + 1, k + 1]),
             size: Table3d::new([h + 1, k + 1, k * h + 1]),
             _phantom: PhantomData,
@@ -378,6 +380,7 @@ where
     fn debug(&self) {
         debug_table(&self.choose, "choose");
         debug_table(&self.choose_h, "choose_h");
+        debug_table(&self.choose_h_inv, "choose_h_inv");
         debug_table(&self.siblings, "siblings");
         debug_table(&self.size, "size");
     }
@@ -399,6 +402,7 @@ where
                 &mut self.siblings,
                 &mut self.choose,
                 &mut self.choose_h,
+                &mut self.choose_h_inv,
                 h,
                 k,
                 m,
@@ -406,11 +410,13 @@ where
         }
     }
 
+    #[expect(clippy::too_many_arguments)]
     fn size_inner<'a>(
         size_table: &'a mut Table3d<T>,
         siblings_table: &mut Table3d<T>,
         choose_table: &mut Table2d<I>,
-        choose_h_table: &mut Table2d<T>,
+        choose_h_table: &mut Table2d<I>,
+        choose_h_inv_table: &mut Table2d<T>,
         h: u32,
         k: u32,
         m: u32,
@@ -422,6 +428,7 @@ where
                 siblings_table,
                 choose_table,
                 choose_h_table,
+                choose_h_inv_table,
                 h,
                 k,
                 m,
@@ -431,11 +438,13 @@ where
         size_table[index].as_ref().unwrap()
     }
 
+    #[expect(clippy::too_many_arguments)]
     fn size_impl(
         size_table: &mut Table3d<T>,
         siblings_table: &mut Table3d<T>,
         choose_table: &mut Table2d<I>,
-        choose_h_table: &mut Table2d<T>,
+        choose_h_table: &mut Table2d<I>,
+        choose_h_inv_table: &mut Table2d<T>,
         h: u32,
         k: u32,
         m: u32,
@@ -464,10 +473,19 @@ where
                         siblings_table,
                         choose_table,
                         choose_h_table,
+                        choose_h_inv_table,
                         h - 1,
                         k - s,
                         (m + 2 * s) - k,
-                    ) * Self::siblings_inner(siblings_table, choose_table, choose_h_table, h, k, s)
+                    ) * Self::siblings_inner(
+                        siblings_table,
+                        choose_table,
+                        choose_h_table,
+                        choose_h_inv_table,
+                        h,
+                        k,
+                        s,
+                    )
                 }
             })
             .sum()
@@ -476,14 +494,16 @@ where
     fn siblings_inner<'a>(
         siblings_table: &'a mut Table3d<T>,
         choose_table: &mut Table2d<I>,
-        choose_h_table: &mut Table2d<T>,
+        choose_h_table: &mut Table2d<I>,
+        choose_h_inv_table: &mut Table2d<T>,
         h: u32,
         k: u32,
         s: u32,
     ) -> &'a T {
         let index = [h as usize, k as usize, s as usize];
         if siblings_table[index].is_none() {
-            let value = Self::siblings_impl(choose_table, choose_h_table, h, k, s);
+            let value =
+                Self::siblings_impl(choose_table, choose_h_table, choose_h_inv_table, h, k, s);
             siblings_table[index] = Some(value.reduced());
         }
         siblings_table[index].as_ref().unwrap()
@@ -491,7 +511,8 @@ where
 
     fn siblings_impl(
         choose_table: &mut Table2d<I>,
-        choose_h_table: &mut Table2d<T>,
+        choose_h_table: &mut Table2d<I>,
+        choose_h_inv_table: &mut Table2d<T>,
         h: u32,
         k: u32,
         s: u32,
@@ -502,7 +523,7 @@ where
             T::from_log2(k - 2 * s)
                 * Self::choose_h(choose_h_table, k - s, h - 1)
                 * Self::choose(choose_table, s, k - s)
-                / Self::choose_h(choose_h_table, k, h)
+                * Self::choose_h_inv(choose_h_inv_table, k, h)
         }
     }
 
@@ -514,11 +535,18 @@ where
         x.as_ref().unwrap()
     }
 
-    fn choose_h(table: &mut Table2d<T>, n: u32, among_h: u32) -> &T {
+    fn choose_h(table: &mut Table2d<I>, n: u32, among_h: u32) -> &I {
         let x = &mut table[[n as usize, among_h as usize]];
         if x.is_none() {
-            let value: T = choose_impl(n, 1 << among_h);
-            *x = Some(value.reduced());
+            *x = Some(I::choose(n, 1 << among_h));
+        }
+        x.as_ref().unwrap()
+    }
+
+    fn choose_h_inv(table: &mut Table2d<T>, n: u32, among_h: u32) -> &T {
+        let x = &mut table[[n as usize, among_h as usize]];
+        if x.is_none() {
+            *x = Some(T::from_ratio(I::one(), D::choose(n, 1 << among_h)));
         }
         x.as_ref().unwrap()
     }
@@ -1107,24 +1135,8 @@ where
         let index = [n as usize, among as usize];
         table
             .entry(index)
-            .or_insert_with(|| (T::one() / choose_impl::<I, D, T>(n, among)).reduced())
+            .or_insert_with(|| T::from_ratio(I::one(), D::choose(n, among)))
     }
-}
-
-fn choose_impl<I, D, T>(n: u32, among: u32) -> T
-where
-    I: Integer,
-    D: Denominator,
-    T: Rational<I, D>,
-{
-    if n > among {
-        return T::zero();
-    }
-    let mut res = T::one();
-    for i in 0..n {
-        res *= T::from(among - i) / T::from(i + 1);
-    }
-    res
 }
 
 type Table2d<T> = ndtable::Table2d<Option<T>>;

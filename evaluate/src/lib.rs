@@ -393,6 +393,24 @@ impl Denominator for BigInt {
     fn powi(&self, n: u32) -> Self {
         self.pow(n)
     }
+
+    fn choose(n: u32, among: u32) -> Self {
+        if n > among {
+            panic!("Division by zero");
+        }
+
+        let mut num = <Self as Denominator>::one();
+        for i in 0..n {
+            num *= <Self as Denominator>::from(among - i);
+        }
+
+        let mut denom = <Self as Denominator>::one();
+        for i in 0..n {
+            denom *= <Self as Denominator>::from(i + 1);
+        }
+
+        num / denom
+    }
 }
 
 impl Rational<BigInt, BigInt> for BigRational {
@@ -452,6 +470,24 @@ impl Denominator for BigUint {
 
     fn powi(&self, n: u32) -> Self {
         self.pow(n)
+    }
+
+    fn choose(n: u32, among: u32) -> Self {
+        if n > among {
+            panic!("Division by zero");
+        }
+
+        let mut num = <Self as Denominator>::one();
+        for i in 0..n {
+            num *= <Self as Denominator>::from(among - i);
+        }
+
+        let mut denom = <Self as Denominator>::one();
+        for i in 0..n {
+            denom *= <Self as Denominator>::from(i + 1);
+        }
+
+        num / denom
     }
 }
 
