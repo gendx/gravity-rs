@@ -351,16 +351,16 @@ where
 
 struct MemoizedComplete<I, D, T> {
     zero: T,
-    choose: Table2d<T>,
+    choose: Table2d<I>,
     choose_h: Table2d<T>,
     siblings: Table3d<T>,
     size: Table3d<T>,
-    _phantom: PhantomData<(I, D)>,
+    _phantom: PhantomData<D>,
 }
 
 impl<I, D, T> MemoizedComplete<I, D, T>
 where
-    I: Integer,
+    I: Integer + Clone,
     D: Denominator,
     T: Rational<I, D> + Clone,
 {
@@ -409,7 +409,7 @@ where
     fn size_inner<'a>(
         size_table: &'a mut Table3d<T>,
         siblings_table: &mut Table3d<T>,
-        choose_table: &mut Table2d<T>,
+        choose_table: &mut Table2d<I>,
         choose_h_table: &mut Table2d<T>,
         h: u32,
         k: u32,
@@ -434,7 +434,7 @@ where
     fn size_impl(
         size_table: &mut Table3d<T>,
         siblings_table: &mut Table3d<T>,
-        choose_table: &mut Table2d<T>,
+        choose_table: &mut Table2d<I>,
         choose_h_table: &mut Table2d<T>,
         h: u32,
         k: u32,
@@ -475,7 +475,7 @@ where
 
     fn siblings_inner<'a>(
         siblings_table: &'a mut Table3d<T>,
-        choose_table: &mut Table2d<T>,
+        choose_table: &mut Table2d<I>,
         choose_h_table: &mut Table2d<T>,
         h: u32,
         k: u32,
@@ -490,7 +490,7 @@ where
     }
 
     fn siblings_impl(
-        choose_table: &mut Table2d<T>,
+        choose_table: &mut Table2d<I>,
         choose_h_table: &mut Table2d<T>,
         h: u32,
         k: u32,
@@ -506,11 +506,10 @@ where
         }
     }
 
-    fn choose(table: &mut Table2d<T>, n: u32, among: u32) -> &T {
+    fn choose(table: &mut Table2d<I>, n: u32, among: u32) -> &I {
         let x = &mut table[[n as usize, among as usize]];
         if x.is_none() {
-            let value: T = choose_impl(n, among);
-            *x = Some(value.reduced());
+            *x = Some(I::choose(n, among));
         }
         x.as_ref().unwrap()
     }
@@ -526,7 +525,7 @@ where
 }
 
 struct Memoized<I, D, T> {
-    choose: SparseTable2d<T>,
+    choose: SparseTable2d<I>,
     choose_inv: SparseTable2d<T>,
     siblings: SparseTable3d<T>,
     size: SparseTable5d<T>,
@@ -628,7 +627,7 @@ where
     fn size_h_inner<'a>(
         size_table: &'a mut SparseTable5d<T>,
         siblings_table: &mut SparseTable3d<T>,
-        choose_table: &mut SparseTable2d<T>,
+        choose_table: &mut SparseTable2d<I>,
         choose_inv_table: &mut SparseTable2d<T>,
         h: u32,
         l: u32,
@@ -672,7 +671,7 @@ where
     fn size_h_impl(
         size_table: &mut SparseTable5d<T>,
         siblings_table: &mut SparseTable3d<T>,
-        choose_table: &mut SparseTable2d<T>,
+        choose_table: &mut SparseTable2d<I>,
         choose_inv_table: &mut SparseTable2d<T>,
         h: u32,
         l: u32,
@@ -721,7 +720,7 @@ where
     fn size_h_even(
         size_table: &mut SparseTable5d<T>,
         siblings_table: &mut SparseTable3d<T>,
-        choose_table: &mut SparseTable2d<T>,
+        choose_table: &mut SparseTable2d<I>,
         choose_inv_table: &mut SparseTable2d<T>,
         h: u32,
         l: u32,
@@ -889,7 +888,7 @@ where
     fn size_h_odd(
         size_table: &mut SparseTable5d<T>,
         siblings_table: &mut SparseTable3d<T>,
-        choose_table: &mut SparseTable2d<T>,
+        choose_table: &mut SparseTable2d<I>,
         choose_inv_table: &mut SparseTable2d<T>,
         h: u32,
         l: u32,
@@ -1069,7 +1068,7 @@ where
 
     fn siblings_inner<'a>(
         siblings_table: &'a mut SparseTable3d<T>,
-        choose_table: &mut SparseTable2d<T>,
+        choose_table: &mut SparseTable2d<I>,
         choose_inv_table: &mut SparseTable2d<T>,
         x: u32,
         k: u32,
@@ -1082,7 +1081,7 @@ where
     }
 
     fn siblings_impl(
-        choose_table: &mut SparseTable2d<T>,
+        choose_table: &mut SparseTable2d<I>,
         choose_inv_table: &mut SparseTable2d<T>,
         x: u32,
         k: u32,
@@ -1099,11 +1098,9 @@ where
         }
     }
 
-    fn choose(table: &mut SparseTable2d<T>, n: u32, among: u32) -> &T {
+    fn choose(table: &mut SparseTable2d<I>, n: u32, among: u32) -> &I {
         let index = [n as usize, among as usize];
-        table
-            .entry(index)
-            .or_insert_with(|| choose_impl::<I, D, T>(n, among).reduced())
+        table.entry(index).or_insert_with(|| I::choose(n, among))
     }
 
     fn choose_inv(table: &mut SparseTable2d<T>, n: u32, among: u32) -> &T {
