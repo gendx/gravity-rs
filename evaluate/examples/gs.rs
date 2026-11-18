@@ -13,6 +13,8 @@ type Table3d<T> = ndtable::Table3d<Option<T>>;
 type SmartBigRational = SmartBigRationalImpl<DenomSparseU16<6542, 16>>;
 
 fn main() {
+    evaluate_costs();
+
     let mut mem: Memoized<F64Log2, F64Log2, F64Log2> =
         Memoized::new(/* max(r) */ 50, /* max(B) */ 20);
     mem.evaluate();
@@ -20,6 +22,257 @@ fn main() {
     let mut mem: Memoized<BigInt, BigUint, SmartBigRational> =
         Memoized::new(/* max(r) */ 50, /* max(B) */ 20);
     mem.evaluate();
+}
+
+fn evaluate_costs() {
+    // Parameters from https://eprint.iacr.org/2026/2502.pdf, tables 4-5.
+    evaluate_cost_for(
+        "128s",
+        16,
+        63,
+        7,
+        16,
+        35,
+        1,
+        5,
+        10,
+        0,
+        3,
+        &[3, 3, 3, 3, 3, 6],
+        8,
+        19 << 14,
+    );
+    evaluate_cost_for(
+        "192s",
+        24,
+        63,
+        7,
+        16,
+        51,
+        1,
+        6,
+        12,
+        0,
+        6,
+        &[3, 3, 3, 3, 3, 3, 6],
+        9,
+        13 << 14,
+    );
+    evaluate_cost_for(
+        "256s",
+        32,
+        64,
+        8,
+        16,
+        67,
+        1,
+        6,
+        17,
+        0,
+        3,
+        &[1, 3, 3, 3, 3, 3, 3],
+        8,
+        273 << 8,
+    );
+
+    evaluate_cost_for(
+        "128f",
+        16,
+        66,
+        22,
+        16,
+        35,
+        7,
+        2,
+        5,
+        1,
+        2,
+        &[1, 1, 2],
+        2,
+        7 << 21,
+    );
+    evaluate_cost_for(
+        "192f",
+        24,
+        66,
+        22,
+        16,
+        51,
+        1,
+        3,
+        34,
+        0,
+        4,
+        &[2, 2, 2, 4],
+        4,
+        69 << 16,
+    );
+    evaluate_cost_for(
+        "256f",
+        32,
+        68,
+        17,
+        16,
+        67,
+        6,
+        3,
+        6,
+        1,
+        3,
+        &[1, 3, 3, 3],
+        4,
+        41 << 15,
+    );
+
+    evaluate_cost_for(
+        "128-224",
+        16,
+        22,
+        1,
+        4,
+        68,
+        1,
+        7,
+        5,
+        5,
+        3,
+        &[4, 4, 4, 4, 4, 4, 4, 4],
+        12,
+        82,
+    );
+    evaluate_cost_for(
+        "192-224",
+        24,
+        21,
+        1,
+        8,
+        67,
+        1,
+        7,
+        8,
+        6,
+        7,
+        &[4, 4, 4, 4, 4, 4, 4, 4],
+        12,
+        104,
+    );
+    evaluate_cost_for(
+        "256-224",
+        32,
+        21,
+        1,
+        4,
+        133,
+        1,
+        7,
+        11,
+        8,
+        9,
+        &[4, 4, 4, 4, 4, 4, 4, 4],
+        12,
+        208,
+    );
+}
+
+#[expect(non_snake_case, clippy::too_many_arguments)]
+fn evaluate_cost_for(
+    title: &str,
+    n: u64,
+    h: u64,
+    D: u64,
+    w: u64,
+    lw: u64,
+    K: u64,
+    L: u64,
+    r: u64,
+    b: u64,
+    u: u64,
+    c: &[u64],
+    E: u64,
+    delta: u64,
+) {
+    let l = 8 * n / w.ilog2() as u64;
+    let lc = (l * (w - 1)).ilog2() / w.ilog2() + 1;
+    assert_eq!(lw, l + lc as u64);
+
+    // See https://eprint.iacr.org/2026/2502.pdf, section 4.1.
+    let B = 1u64 << b;
+    let O = 1u64 << u;
+    let t = 1u64 << L;
+    let k = L + 1;
+    assert!(E <= c.iter().sum());
+
+    // See https://eprint.iacr.org/2026/2502.pdf, equation 11.
+    let mut p = Poly::ones(1);
+    for &x in c.iter() {
+        p = p.mul_trunc(&Poly::ones(x as usize + 1), E as usize + 1);
+    }
+    let N = p.0[E as usize] as u64;
+
+    let eta = eta(r as u32, K as u32, N as u32);
+    let p_inv = (1u64 << 32).div_ceil(delta);
+
+    // See https://eprint.iacr.org/2026/2502.pdf, equation 12.
+    let ll = b + u + ((K * r) as f64 * ((t * N) as f64).log2()).ceil() as u64;
+    let q_enc = (32 + h + ll).div_ceil(8 * n);
+
+    // See https://eprint.iacr.org/2026/2502.pdf, equation 29.
+    let signature_size_hyper_tree = n * (1 + D * lw + h);
+
+    // See https://eprint.iacr.org/2026/2502.pdf, equation 30.
+    assert!(h.is_multiple_of(D));
+    let hh = h / D;
+    let sign_hashes_hyper_tree = D * ((1 << hh) * (lw * w + 1) + ((1 << hh) - 1)) + 2;
+    let verif_hashes_hyper_tree = D * (lw * w / 2 + 1 + hh) + 1;
+
+    // See https://eprint.iacr.org/2026/2502.pdf, equation 17.
+    let signature_size_fts = 4 + n * K * (b + u + r * k);
+
+    assert_eq!(c.len() as u64, L + 1);
+    let J = t * (c.last().unwrap() + 3)
+        + c.iter()
+            .take(L as usize)
+            .enumerate()
+            .map(|(i, c)| c << (i + 1))
+            .sum::<u64>()
+        - 1;
+    let G_child = (O + (r - 1) * t) * J + O - 1;
+    let G = K * B * (G_child + 1) - 1;
+
+    let sign_hashes_fts = G + ((p_inv + q_enc - 1) as f64 / eta).ceil() as u64;
+    let verif_hashes_fts =
+        q_enc + K * (b + u + r * (E + c.iter().take(L as usize).sum::<u64>() + L + 1)) + K - 1;
+
+    let signature_size = signature_size_hyper_tree + signature_size_fts;
+    let sign_hashes = sign_hashes_hyper_tree + sign_hashes_fts;
+    let verif_hashes = verif_hashes_hyper_tree + verif_hashes_fts;
+
+    println!("- {title}:");
+    println!(
+        "  - size: {signature_size} bytes = {signature_size_hyper_tree} ({:.1}%) + {signature_size_fts} ({:.1}%) = wots: {} ({:.1}%, {n} * {D} * {lw}) + auth: {} ({:.1}%, {n} * {}) + fts: ~{} ({n} * {K} * {r} * {k})",
+        signature_size_hyper_tree as f64 * 100.0 / signature_size as f64,
+        signature_size_fts as f64 * 100.0 / signature_size as f64,
+        n * D * lw,
+        (n * D * lw) as f64 * 100.0 / signature_size as f64,
+        n * (h + 1),
+        (n * (h + 1)) as f64 * 100.0 / signature_size as f64,
+        h + 1,
+        n * K * r * k,
+    );
+    println!(
+        "  - signing: {sign_hashes} hashes = {sign_hashes_hyper_tree} ({:.1}%) + {sign_hashes_fts} ({:.1}%) = wots: ~{} ({D} * {} * {lw} * {w})",
+        sign_hashes_hyper_tree as f64 * 100.0 / sign_hashes as f64,
+        sign_hashes_fts as f64 * 100.0 / sign_hashes as f64,
+        D * (1 << hh) * lw * w,
+        1 << hh,
+    );
+    println!(
+        "  - verification: {verif_hashes} hashes = {verif_hashes_hyper_tree} ({:.1}%) + {verif_hashes_fts} ({:.1}%) = wots: ~{} ({D} * {lw} * {})",
+        verif_hashes_hyper_tree as f64 * 100.0 / verif_hashes as f64,
+        verif_hashes_fts as f64 * 100.0 / verif_hashes as f64,
+        D * lw * w / 2,
+        w / 2,
+    );
 }
 
 #[expect(non_snake_case)]
@@ -64,7 +317,7 @@ where
     for<'a> &'a T: Mul<&'a T, Output = T>,
 {
     fn evaluate(&mut self) {
-        // Parameters from https://eprint.iacr.org/2026/2502.pdf, table 5.
+        // Parameters from https://eprint.iacr.org/2026/2502.pdf, tables 4-5.
         self.evaluate_gs(
             "128s",
             3,
@@ -535,18 +788,25 @@ where
 /// https://eprint.iacr.org/2026/2502.pdf, section 4.4.
 #[expect(non_snake_case)]
 fn tau(r: u32, K: u32, delta: u32, N: u32) -> f64 {
-    let U = <BigUint as From<_>>::from(N).pow(r * K);
-    assert!(!U.is_zero());
-    let l = (&U - <BigUint as One>::one()).bits();
-    let eta = ToPrimitive::to_f64(&BigRational::new(
-        U.into(),
-        (<BigUint as One>::one() << l).into(),
-    ))
-    .unwrap();
+    let eta = eta(r, K, N);
     let rho = delta as f64 / 4294967296_f64;
     let tau = rho * eta;
     println!("tau = {rho} * {eta} = {tau}");
     tau
+}
+
+/// Computes the encoding acceptance probability `eta` as described in
+/// https://eprint.iacr.org/2026/2502.pdf, section 4.4.
+#[expect(non_snake_case)]
+fn eta(r: u32, K: u32, N: u32) -> f64 {
+    let U = <BigUint as From<_>>::from(N).pow(r * K);
+    assert!(!U.is_zero());
+    let l = (&U - <BigUint as One>::one()).bits();
+    ToPrimitive::to_f64(&BigRational::new(
+        U.into(),
+        (<BigUint as One>::one() << l).into(),
+    ))
+    .unwrap()
 }
 
 #[derive(Clone)]
