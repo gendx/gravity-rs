@@ -1,6 +1,7 @@
-use evaluate::{Denominator, F64Log2, Integer, Rational};
-use num::traits::Pow;
-use num::{BigInt, BigRational, BigUint, One, ToPrimitive, Zero};
+use evaluate::{Denominator, F64Log2, Integer, Rational, big_rational_to_f64};
+use num_bigint::{BigInt, BigUint};
+use num_rational::Ratio;
+use num_traits::{One, Pow, Zero};
 use smart_big_rational::{DenomSparseU16, SmartBigRational as SmartBigRationalImpl};
 use std::fmt;
 use std::fmt::Debug;
@@ -10,6 +11,7 @@ use std::ops::Mul;
 type HashMap<K, V> = std::collections::HashMap<K, V, rustc_hash::FxBuildHasher>;
 type Table2d<T> = ndtable::Table2d<Option<T>>;
 type Table3d<T> = ndtable::Table3d<Option<T>>;
+type BigRational = Ratio<BigInt>;
 type SmartBigRational = SmartBigRationalImpl<DenomSparseU16<6542, 16>>;
 
 fn main() {
@@ -802,7 +804,7 @@ fn eta(r: u32, K: u32, N: u32) -> f64 {
     let U = <BigUint as From<_>>::from(N).pow(r * K);
     assert!(!U.is_zero());
     let l = (&U - <BigUint as One>::one()).bits();
-    ToPrimitive::to_f64(&BigRational::new(
+    big_rational_to_f64(&BigRational::new(
         U.into(),
         (<BigUint as One>::one() << l).into(),
     ))

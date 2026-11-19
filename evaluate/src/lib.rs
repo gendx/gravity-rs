@@ -1,10 +1,51 @@
-use num::bigint::Sign;
-use num::traits::Pow;
-use num::{BigInt, BigRational, BigUint, One, ToPrimitive, Zero};
+use num_bigint::{BigInt, BigUint, Sign};
+use num_bigint_04::{BigInt as OldBigInt, Sign as OldSign};
+use num_rational::{BigRational as OldBigRational, Ratio};
+use num_traits::{One, Pow, ToPrimitive, Zero};
 use smart_big_rational::{Denom, DenomRef, SmartBigRational};
 use std::fmt::Debug;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub};
+
+type BigRational = Ratio<BigInt>;
+
+fn big_int_to_old(x: &BigInt) -> OldBigInt {
+    OldBigInt::new(
+        match x.sign() {
+            Sign::Minus => OldSign::Minus,
+            Sign::NoSign => OldSign::NoSign,
+            Sign::Plus => OldSign::Plus,
+        },
+        x.magnitude().to_u32_digits(),
+    )
+}
+
+fn big_rational_to_old(x: &BigRational) -> OldBigRational {
+    OldBigRational::new(big_int_to_old(x.numer()), big_int_to_old(x.denom()))
+}
+
+fn big_int_from_old(x: &OldBigInt) -> BigInt {
+    BigInt::new(
+        match x.sign() {
+            OldSign::Minus => Sign::Minus,
+            OldSign::NoSign => Sign::NoSign,
+            OldSign::Plus => Sign::Plus,
+        },
+        x.magnitude().to_u32_digits(),
+    )
+}
+
+fn big_rational_from_old(x: &OldBigRational) -> BigRational {
+    BigRational::new(big_int_from_old(x.numer()), big_int_from_old(x.denom()))
+}
+
+pub fn big_rational_to_f64(x: &BigRational) -> Option<f64> {
+    big_rational_to_old(x).to_f64()
+}
+
+pub fn big_rational_from_f64(x: f64) -> Option<BigRational> {
+    Some(big_rational_from_old(&OldBigRational::from_float(x)?))
+}
 
 pub trait Integer:
     Sub<Output = Self>
@@ -439,7 +480,7 @@ impl Rational<BigInt, BigInt> for BigRational {
     }
 
     fn to_f64(&self) -> f64 {
-        ToPrimitive::to_f64(self).unwrap()
+        big_rational_to_f64(self).unwrap()
     }
 
     fn to_f64_log2(&self) -> f64 {
@@ -455,7 +496,7 @@ impl Rational<BigInt, BigInt> for BigRational {
     }
 
     fn exp(&self) -> Self {
-        BigRational::from_float(Rational::to_f64(self).exp()).unwrap()
+        big_rational_from_f64(Rational::to_f64(self).exp()).unwrap()
     }
 }
 
@@ -536,7 +577,7 @@ where
     }
 
     fn exp(&self) -> Self {
-        BigRational::from_float(Rational::to_f64(self).exp())
+        big_rational_from_f64(Rational::to_f64(self).exp())
             .unwrap()
             .into()
     }

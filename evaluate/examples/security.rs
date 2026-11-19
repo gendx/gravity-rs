@@ -1,8 +1,11 @@
 use evaluate::{Denominator, F64Log2, Integer, Rational};
-use num::{BigInt, BigRational};
+use num_bigint::BigInt;
+use num_rational::Ratio;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::Mul;
+
+type BigRational = Ratio<BigInt>;
 
 fn main() {
     let mut mem: Memoized<F64Log2, F64Log2, F64Log2> =

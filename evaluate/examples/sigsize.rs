@@ -1,5 +1,5 @@
 use evaluate::{Denominator, F64Log2, Integer, Rational};
-use num::{BigInt, BigUint};
+use num_bigint::{BigInt, BigUint};
 use smart_big_rational::{DenomSparseU16, SmartBigRational as SmartBigRationalImpl};
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -1169,7 +1169,11 @@ fn debug_sparse_table<T, const N: usize, S>(table: &ndtable::SparseTableNd<T, N,
 #[cfg(test)]
 mod test {
     use super::*;
-    use num::{BigRational, Zero};
+    use num_bigint::BigInt;
+    use num_rational::Ratio;
+    use num_traits::Zero;
+
+    type BigRational = Ratio<BigInt>;
 
     fn test_distribution(k: u32, t: u32, expected: &[u32], denom: u32) {
         assert_eq!(expected.len(), t as usize + 1);
